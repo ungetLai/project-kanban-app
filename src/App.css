@@ -1,0 +1,119 @@
+:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --text-color: #f8fafc;
+  --accent-color: #38bdf8;
+  --column-bg: #334155;
+  --column-header: #475569;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+}
+
+.kanban-container {
+  padding: 2rem;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.kanban-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kanban-board {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.kanban-column {
+  background-color: var(--column-bg);
+  min-width: 300px;
+  max-width: 300px;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.column-header {
+  padding: 1rem;
+  background-color: var(--column-header);
+  border-radius: 0.75rem 0.75rem 0 0;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.column-count {
+  background: rgba(0,0,0,0.3);
+  padding: 0.1rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+}
+
+.task-list {
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-card {
+  background-color: var(--card-bg);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 4px solid var(--accent-color);
+}
+
+.task-card:active {
+  cursor: grabbing;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+.task-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+
+.task-desc {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.add-task-btn {
+  margin-top: 1rem;
+  background: transparent;
+  border: 1px dashed #64748b;
+  color: #94a3b8;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-task-btn:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
