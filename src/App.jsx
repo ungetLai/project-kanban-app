@@ -21,12 +21,12 @@ import { Plus, GripVertical, Save } from 'lucide-react';
 import './App.css';
 
 const COLUMNS = [
-  { id: 'backlog', title: 'Backlog (待討論)' },
+  { id: 'backlog', title: 'BackLog (待討論)' },
   { id: 'todo', title: 'Todo (準備中)' },
-  { id: 'ongoing', title: 'Ongoing (執行中)' },
-  { id: 'pending', title: 'Pending (待定)' },
-  { id: 'review', title: 'Review (回顧)' },
-  { id: 'done', title: 'Done (完成)' },
+  { id: 'ongoing', title: 'onGoing (執行階段)' },
+  { id: 'pending', title: 'Pending (有待確認議題)' },
+  { id: 'review', title: 'Review (任務驗收)' },
+  { id: 'done', title: 'Done (結案)' },
 ];
 
 const API_URL = '/api/tasks';
