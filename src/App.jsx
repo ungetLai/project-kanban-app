@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Save } from 'lucide-react';
+import { Plus, GripVertical, Save, Pencil, Trash2 } from 'lucide-react';
 import './App.css';
 
 const COLUMNS = [
@@ -31,7 +31,7 @@ const COLUMNS = [
 
 const API_URL = '/api/tasks';
 
-function TaskCard({ task, onDelete }) {
+function TaskCard({ task, onEdit, onDelete }) {
   const {
     attributes,
     listeners,
@@ -49,13 +49,31 @@ function TaskCard({ task, onDelete }) {
 
   return (
     <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
-      <div className="task-title">{task.content}</div>
+      <div className="task-header">
+        <div className="task-title">{task.content}</div>
+        <div className="task-actions" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <button 
+            className="task-action-btn" 
+            onClick={() => onEdit(task.id)} 
+            title="編輯"
+          >
+            <Pencil size={14} />
+          </button>
+          <button 
+            className="task-action-btn delete" 
+            onClick={() => onDelete(task.id)} 
+            title="刪除"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
       {task.desc && <div className="task-desc">{task.desc}</div>}
     </div>
   );
 }
 
-function Column({ id, title, tasks, onAddTask }) {
+function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
@@ -67,7 +85,12 @@ function Column({ id, title, tasks, onAddTask }) {
       <div ref={setNodeRef} className="task-list">
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              onEdit={onEditTask}
+              onDelete={onDeleteTask}
+            />
           ))}
         </SortableContext>
         <button className="add-task-btn" onClick={() => onAddTask(id)}>
@@ -154,6 +177,33 @@ export default function App() {
     };
 
     const newTasks = [...tasks, newTask];
+    setTasks(newTasks);
+    saveTasks(newTasks);
+  };
+
+  // 修改任務
+  const handleEditTask = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const content = prompt('修改任務標題：', task.content);
+    if (content === null) return;
+
+    const desc = prompt('修改任務描述：', task.desc || '');
+    if (desc === null) return;
+
+    const newTasks = tasks.map(t => 
+      t.id === taskId ? { ...t, content, desc } : t
+    );
+    setTasks(newTasks);
+    saveTasks(newTasks);
+  };
+
+  // 刪除任務
+  const handleDeleteTask = (taskId) => {
+    if (!confirm('確定要刪除此任務嗎？')) return;
+    
+    const newTasks = tasks.filter(t => t.id !== taskId);
     setTasks(newTasks);
     saveTasks(newTasks);
   };
@@ -250,6 +300,8 @@ export default function App() {
               title={col.title}
               tasks={tasks.filter((t) => t.status === col.id)}
               onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
             />
           ))}
           <DragOverlay dropAnimation={{
