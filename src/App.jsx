@@ -48,9 +48,9 @@ function TaskCard({ task, onDelete }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className=\"task-card\" {...attributes} {...listeners}>
-      <div className=\"task-title\">{task.content}</div>
-      {task.desc && <div className=\"task-desc\">{task.desc}</div>}
+    <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
+      <div className="task-title">{task.content}</div>
+      {task.desc && <div className="task-desc">{task.desc}</div>}
     </div>
   );
 }
@@ -59,18 +59,18 @@ function Column({ id, title, tasks, onAddTask }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
-    <div className=\"kanban-column\">
-      <div className=\"column-header\">
+    <div className="kanban-column">
+      <div className="column-header">
         <span>{title}</span>
-        <span className=\"column-count\">{tasks.length}</span>
+        <span className="column-count">{tasks.length}</span>
       </div>
-      <div ref={setNodeRef} className=\"task-list\">
+      <div ref={setNodeRef} className="task-list">
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
-        <button className=\"add-task-btn\" onClick={() => onAddTask(id)}>
+        <button className="add-task-btn" onClick={() => onAddTask(id)}>
           <Plus size={16} /> 新增任務
         </button>
       </div>
@@ -214,7 +214,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className=\"kanban-container\">
+      <div className="kanban-container">
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           載入中... 🦞
         </div>
@@ -223,10 +223,10 @@ export default function App() {
   }
 
   return (
-    <div className=\"kanban-container\">
-      <header className=\"kanban-header\">
+    <div className="kanban-container">
+      <header className="kanban-header">
         <h1>🦞 專案開發看板 (PARA 擴充版)</h1>
-        <div className=\"save-indicator\">
+        <div className="save-indicator">
           {saving ? (
             <span>💾 儲存中...</span>
           ) : lastSaved ? (
@@ -235,7 +235,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className=\"kanban-board\">
+      <div className="kanban-board">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -262,9 +262,9 @@ export default function App() {
             }),
           }}>
             {activeId ? (
-              <div className=\"task-card\" style={{ cursor: 'grabbing' }}>
-                <div className=\"task-title\">{activeTask?.content}</div>
-                {activeTask?.desc && <div className=\"task-desc\">{activeTask?.desc}</div>}
+              <div className="task-card" style={{ cursor: 'grabbing' }}>
+                <div className="task-title">{activeTask?.content}</div>
+                {activeTask?.desc && <div className="task-desc">{activeTask?.desc}</div>}
               </div>
             ) : null}
           </DragOverlay>
