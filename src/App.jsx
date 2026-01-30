@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical } from 'lucide-react';
+import { Plus, GripVertical, Save } from 'lucide-react';
 import './App.css';
 
 const COLUMNS = [
@@ -29,13 +29,9 @@ const COLUMNS = [
   { id: 'done', title: 'Done (完成)' },
 ];
 
-const INITIAL_TASKS = [
-  { id: '1', content: '設計看板架構', desc: '定義六個主要流程階段', status: 'done' },
-  { id: '2', content: '部署到 GitHub', desc: '建立 Repository 並上傳初步代碼', status: 'ongoing' },
-  { id: '3', content: '整合 PARA 系統', desc: '讓看板任務可以自動歸類到 Archives', status: 'todo' },
-];
+const API_URL = '/api/tasks';
 
-function TaskCard({ task }) {
+function TaskCard({ task, onDelete }) {
   const {
     attributes,
     listeners,
@@ -52,29 +48,29 @@ function TaskCard({ task }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
-      <div className="task-title">{task.content}</div>
-      {task.desc && <div className="task-desc">{task.desc}</div>}
+    <div ref={setNodeRef} style={style} className=\"task-card\" {...attributes} {...listeners}>
+      <div className=\"task-title\">{task.content}</div>
+      {task.desc && <div className=\"task-desc\">{task.desc}</div>}
     </div>
   );
 }
 
-function Column({ id, title, tasks }) {
+function Column({ id, title, tasks, onAddTask }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
-    <div className="kanban-column">
-      <div className="column-header">
+    <div className=\"kanban-column\">
+      <div className=\"column-header\">
         <span>{title}</span>
-        <span className="column-count">{tasks.length}</span>
+        <span className=\"column-count\">{tasks.length}</span>
       </div>
-      <div ref={setNodeRef} className="task-list">
+      <div ref={setNodeRef} className=\"task-list\">
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
-        <button className="add-task-btn">
+        <button className=\"add-task-btn\" onClick={() => onAddTask(id)}>
           <Plus size={16} /> 新增任務
         </button>
       </div>
@@ -83,8 +79,11 @@ function Column({ id, title, tasks }) {
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState([]);
   const [activeId, setActiveId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -97,6 +96,68 @@ export default function App() {
     })
   );
 
+  // 載入任務
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(API_URL);
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (error) {
+      console.error('載入任務失敗:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 儲存任務
+  const saveTasks = async (newTasks) => {
+    try {
+      setSaving(true);
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTasks),
+      });
+
+      if (response.ok) {
+        setLastSaved(new Date());
+      }
+    } catch (error) {
+      console.error('儲存任務失敗:', error);
+      alert('儲存失敗，請稍後再試');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 新增任務
+  const handleAddTask = (status) => {
+    const content = prompt('請輸入任務標題：');
+    if (!content) return;
+
+    const desc = prompt('請輸入任務描述（選填）：');
+    
+    const newTask = {
+      id: Date.now().toString(),
+      content,
+      desc: desc || '',
+      status,
+    };
+
+    const newTasks = [...tasks, newTask];
+    setTasks(newTasks);
+    saveTasks(newTasks);
+  };
+
   const onDragStart = (event) => {
     setActiveId(event.active.id);
   };
@@ -108,12 +169,10 @@ export default function App() {
     const activeTask = tasks.find(t => t.id === active.id);
     if (!activeTask) return;
 
-    // Check if dragging over a column or another task
     const overId = over.id;
     const overColumn = COLUMNS.find(c => c.id === overId);
     
     if (overColumn) {
-      // Dropping directly onto an empty column
       if (activeTask.status !== overId) {
         setTasks(prev => prev.map(t => t.id === active.id ? { ...t, status: overId } : t));
       }
@@ -122,7 +181,6 @@ export default function App() {
 
     const overTask = tasks.find(t => t.id === overId);
     if (overTask && activeTask.status !== overTask.status) {
-      // Dragging over a task in a different column
       setTasks(prev => prev.map(t => t.id === active.id ? { ...t, status: overTask.status } : t));
     }
   };
@@ -134,27 +192,50 @@ export default function App() {
       return;
     }
 
+    let newTasks = tasks;
+
     if (active.id !== over.id) {
       const oldIndex = tasks.findIndex((t) => t.id === active.id);
       const newIndex = tasks.findIndex((t) => t.id === over.id);
       
       if (newIndex !== -1) {
-        setTasks((items) => arrayMove(items, oldIndex, newIndex));
+        newTasks = arrayMove(tasks, oldIndex, newIndex);
+        setTasks(newTasks);
       }
     }
 
     setActiveId(null);
+    
+    // 拖曳結束後自動儲存
+    saveTasks(newTasks);
   };
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
+  if (loading) {
+    return (
+      <div className=\"kanban-container\">
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          載入中... 🦞
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="kanban-container">
-      <header className="kanban-header">
+    <div className=\"kanban-container\">
+      <header className=\"kanban-header\">
         <h1>🦞 專案開發看板 (PARA 擴充版)</h1>
+        <div className=\"save-indicator\">
+          {saving ? (
+            <span>💾 儲存中...</span>
+          ) : lastSaved ? (
+            <span>✅ 已儲存 ({lastSaved.toLocaleTimeString()})</span>
+          ) : null}
+        </div>
       </header>
 
-      <div className="kanban-board">
+      <div className=\"kanban-board\">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -168,6 +249,7 @@ export default function App() {
               id={col.id}
               title={col.title}
               tasks={tasks.filter((t) => t.status === col.id)}
+              onAddTask={handleAddTask}
             />
           ))}
           <DragOverlay dropAnimation={{
@@ -180,9 +262,9 @@ export default function App() {
             }),
           }}>
             {activeId ? (
-              <div className="task-card" style={{ cursor: 'grabbing' }}>
-                <div className="task-title">{activeTask?.content}</div>
-                {activeTask?.desc && <div className="task-desc">{activeTask?.desc}</div>}
+              <div className=\"task-card\" style={{ cursor: 'grabbing' }}>
+                <div className=\"task-title\">{activeTask?.content}</div>
+                {activeTask?.desc && <div className=\"task-desc\">{activeTask?.desc}</div>}
               </div>
             ) : null}
           </DragOverlay>
