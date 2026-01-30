@@ -98,6 +98,45 @@ body {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.task-card:hover .task-actions {
+  opacity: 1;
+}
+
+.task-action-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-action-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-color);
+}
+
+.task-action-btn.delete:hover {
+  color: #ef4444;
+}
+
 .task-title {
   font-weight: 600;
   margin-bottom: 0.5rem;
