@@ -1,5 +1,17 @@
 # 本地開發測試指南
 
+## 身分驗證 (Authentication)
+
+本系統現在啟用了簡單的 Telegram 身分驗證。在訪問首頁時，需要傳入以下 URL 參數：
+
+- `tid`: Telegram ID (例如: `8491288413`)
+- `uname`: Telegram 帳號 (例如: `ungetLai`)
+
+**範例 URL:**
+`http://localhost:5173/?tid=8491288413&uname=ungetLai`
+
+如果身分驗證失敗，系統將顯示 401 Unauthorized 錯誤及入幫招募訊息。
+
 ## 本地測試 (不需要 Redis)
 
 如果您想在本地測試，可以使用 localStorage 暫時替代：

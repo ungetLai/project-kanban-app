@@ -17,8 +17,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Save } from 'lucide-react';
+import { Plus, GripVertical, Save, Lock } from 'lucide-react';
 import './App.css';
+import { ALLOWED_USERS } from './AllowedUsers';
 
 const COLUMNS = [
   { id: 'backlog', title: 'Backlog (待討論)' },
@@ -31,7 +32,7 @@ const COLUMNS = [
 
 const API_URL = '/api/tasks';
 
-function TaskCard({ task, onDelete }) {
+function TaskCard({ task }) {
   const {
     attributes,
     listeners,
@@ -48,9 +49,9 @@ function TaskCard({ task, onDelete }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className=\"task-card\" {...attributes} {...listeners}>
-      <div className=\"task-title\">{task.content}</div>
-      {task.desc && <div className=\"task-desc\">{task.desc}</div>}
+    <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
+      <div className="task-title">{task.content}</div>
+      {task.desc && <div className="task-desc">{task.desc}</div>}
     </div>
   );
 }
@@ -59,20 +60,44 @@ function Column({ id, title, tasks, onAddTask }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
-    <div className=\"kanban-column\">
-      <div className=\"column-header\">
+    <div className="kanban-column">
+      <div className="column-header">
         <span>{title}</span>
-        <span className=\"column-count\">{tasks.length}</span>
+        <span className="column-count">{tasks.length}</span>
       </div>
-      <div ref={setNodeRef} className=\"task-list\">
+      <div ref={setNodeRef} className="task-list">
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </SortableContext>
-        <button className=\"add-task-btn\" onClick={() => onAddTask(id)}>
+        <button className="add-task-btn" onClick={() => onAddTask(id)}>
           <Plus size={16} /> 新增任務
         </button>
+      </div>
+    </div>
+  );
+}
+
+function Unauthorized() {
+  return (
+    <div className="unauthorized-container">
+      <div className="unauthorized-card">
+        <div className="error-status">
+          <Lock size={48} color="#ef4444" />
+          <h1>401 Unauthorized</h1>
+        </div>
+        <div className="recruit-banner">
+          <h2>🦞 龍蝦幫招募令 🦞</h2>
+          <div className="recruit-content">
+            <p>看來你還沒拿到入幫許可證，或者身分驗證失敗了！</p>
+            <p>我們在尋找志同道合的夥伴，一同在開發的江湖中闖蕩。</p>
+            <p>如果你有熱忱、有義氣，歡迎聯絡幫主申請入幫！</p>
+          </div>
+          <div className="contact-info">
+            聯絡人：<a href="https://t.me/ungetLai" target="_blank" rel="noopener noreferrer">龍蝦幫幫主</a>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -84,6 +109,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [isAuthorized, setIsAuthorized] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,18 +122,31 @@ export default function App() {
     })
   );
 
-  // 載入任務
+  // 驗證身分
   useEffect(() => {
-    loadTasks();
+    const params = new URLSearchParams(window.location.search);
+    const tid = params.get('tid');
+    const uname = params.get('uname');
+
+    const user = ALLOWED_USERS.find(u => u.id === tid && u.username === uname);
+    if (user) {
+      setIsAuthorized(true);
+      loadTasks(tid, uname);
+    } else {
+      setIsAuthorized(false);
+      setLoading(false);
+    }
   }, []);
 
-  const loadTasks = async () => {
+  const loadTasks = async (tid, uname) => {
     try {
       setLoading(true);
-      const response = await fetch(API_URL);
+      const response = await fetch(`${API_URL}?tid=${tid}&uname=${uname}`);
       if (response.ok) {
         const data = await response.json();
         setTasks(data);
+      } else if (response.status === 401) {
+        setIsAuthorized(false);
       }
     } catch (error) {
       console.error('載入任務失敗:', error);
@@ -118,9 +157,13 @@ export default function App() {
 
   // 儲存任務
   const saveTasks = async (newTasks) => {
+    const params = new URLSearchParams(window.location.search);
+    const tid = params.get('tid');
+    const uname = params.get('uname');
+
     try {
       setSaving(true);
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_URL}?tid=${tid}&uname=${uname}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +257,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className=\"kanban-container\">
+      <div className="kanban-container">
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           載入中... 🦞
         </div>
@@ -222,11 +265,15 @@ export default function App() {
     );
   }
 
+  if (isAuthorized === false) {
+    return <Unauthorized />;
+  }
+
   return (
-    <div className=\"kanban-container\">
-      <header className=\"kanban-header\">
+    <div className="kanban-container">
+      <header className="kanban-header">
         <h1>🦞 專案開發看板 (PARA 擴充版)</h1>
-        <div className=\"save-indicator\">
+        <div className="save-indicator">
           {saving ? (
             <span>💾 儲存中...</span>
           ) : lastSaved ? (
@@ -235,7 +282,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className=\"kanban-board\">
+      <div className="kanban-board">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -262,9 +309,9 @@ export default function App() {
             }),
           }}>
             {activeId ? (
-              <div className=\"task-card\" style={{ cursor: 'grabbing' }}>
-                <div className=\"task-title\">{activeTask?.content}</div>
-                {activeTask?.desc && <div className=\"task-desc\">{activeTask?.desc}</div>}
+              <div className="task-card" style={{ cursor: 'grabbing' }}>
+                <div className="task-title">{activeTask?.content}</div>
+                {activeTask?.desc && <div className="task-desc">{activeTask?.desc}</div>}
               </div>
             ) : null}
           </DragOverlay>

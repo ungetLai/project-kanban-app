@@ -9,6 +9,15 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // 驗證身分
+  const { tid, uname } = req.query;
+  const { ALLOWED_USERS } = await import('./users.js');
+  const isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === uname);
+
+  if (!isAuthorized) {
+    return res.status(401).json({ error: 'Unauthorized', recruitment: '加入龍蝦幫：https://t.me/ungetLai' });
+  }
+
   try {
     // 使用動態 import
     const { Redis } = await import('@upstash/redis');
