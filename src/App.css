@@ -1,4 +1,15 @@
 :root {
+  /* Light Mode (Default) */
+  --bg-color: #f1f5f9;
+  --card-bg: #ffffff;
+  --text-color: #0f172a;
+  --accent-color: #0284c7;
+  --column-bg: #e2e8f0;
+  --column-header: #cbd5e1;
+}
+
+.dark {
+  /* Dark Mode */
   --bg-color: #0f172a;
   --card-bg: #1e293b;
   --text-color: #f8fafc;
@@ -533,4 +544,49 @@ body {
 
 .contact-info a:hover {
   border-color: var(--accent-color);
+}
+
+/* Tags & Priority */
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.task-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  background: rgba(125,125,125,0.2);
+  border-radius: 0.25rem;
+  color: var(--text-color);
+}
+
+.priority-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  margin-right: 0.5rem;
+  display: inline-block;
+}
+
+.priority-P0 { background: #ef4444; color: white; }
+.priority-P1 { background: #f97316; color: white; }
+.priority-P2 { background: #eab308; color: black; }
+.priority-P3 { background: #3b82f6; color: white; }
+
+.dark-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark-toggle:hover {
+  background: rgba(125,125,125,0.1);
 }

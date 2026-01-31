@@ -1,5 +1,14 @@
 import { Redis } from '@upstash/redis';
 
+/**
+ * [Infra] Redis Optimization Plan
+ * Current: Single JSON blob (kanban:tasks). Simple but not scalable.
+ * Future: 
+ * 1. Use Redis JSON (JSON.SET kanban:task:{id} $ { ... }) for atomic updates.
+ * 2. Use RediSearch for filtering/sorting by tags/priority.
+ * 3. Use Sets (kanban:tasks:ids) for indexing.
+ */
+
 export default async function handler(req, res) {
   // Set CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
