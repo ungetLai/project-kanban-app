@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   // 驗證身分
   const { tid, uname } = req.query;
   const { ALLOWED_USERS } = await import('./users.js');
-  const isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === uname);
+  const isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
 
   if (!isAuthorized) {
     return res.status(401).json({ error: 'Unauthorized', recruitment: '加入龍蝦幫：https://t.me/ungetLai' });
@@ -32,7 +32,6 @@ export default async function handler(req, res) {
     const getTasks = async () => {
       let tasks = await redis.get(TASKS_KEY);
       if (!tasks) {
-        // Initial seed if empty
         const initialTasks = [
           { id: '1', content: '設計看板架構', desc: '定義六個主要流程階段', status: 'done' },
           { id: '2', content: '部署到 Vercel', desc: '建立 Repository 並上傳代碼', status: 'done' },
@@ -52,27 +51,29 @@ export default async function handler(req, res) {
       let filteredTasks = tasks;
       if (status) {
         if (status !== 'all') {
-          const statuses = status.split(',');
-          filteredTasks = tasks.filter(t => statuses.includes(t.status));
+          const statuses = status.toLowerCase().split(',').map(s => s.trim());
+          filteredTasks = tasks.filter(t => statuses.includes((t.status || '').toLowerCase().trim()));
         }
       } else {
         // Default: exclude done and archived
-        filteredTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'archived');
+        filteredTasks = tasks.filter(t => {
+          const s = (t.status || '').toLowerCase().trim();
+          return s !== 'done' && s !== 'archived';
+        });
       }
       return res.status(200).json(filteredTasks);
       
     } else if (req.method === 'POST') {
       const body = req.body;
+      const tasks = await getTasks();
       if (Array.isArray(body)) {
-        // Legacy: Overwrite all
         await redis.set(TASKS_KEY, JSON.stringify(body));
         return res.status(200).json({ success: true, count: body.length });
       } else {
-        // Create single task
-        const tasks = await getTasks();
         const newTask = body;
-        // Simple validation
         if (!newTask.id) newTask.id = Date.now().toString();
+        // Ensure status is stored normalized
+        if (newTask.status) newTask.status = newTask.status.toLowerCase().trim();
         
         tasks.push(newTask);
         await redis.set(TASKS_KEY, JSON.stringify(tasks));
@@ -80,20 +81,18 @@ export default async function handler(req, res) {
       }
       
     } else if (req.method === 'PUT') {
-      // Update single task
       const updateData = req.body;
       const id = req.query.id || updateData.id;
-      
       if (!id) return res.status(400).json({ error: 'Missing ID' });
 
       const tasks = await getTasks();
       const index = tasks.findIndex(t => t.id.toString() === id.toString());
-      
       if (index === -1) return res.status(404).json({ error: 'Task not found' });
 
-      // Merge updates
+      // Normalize status if updated
+      if (updateData.status) updateData.status = updateData.status.toLowerCase().trim();
+
       tasks[index] = { ...tasks[index], ...updateData, updatedAt: Date.now() };
-      
       await redis.set(TASKS_KEY, JSON.stringify(tasks));
       return res.status(200).json(tasks[index]);
 
@@ -103,7 +102,6 @@ export default async function handler(req, res) {
 
       const tasks = await getTasks();
       const newTasks = tasks.filter(t => t.id.toString() !== id.toString());
-      
       await redis.set(TASKS_KEY, JSON.stringify(newTasks));
       return res.status(200).json({ success: true });
 
@@ -112,9 +110,6 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({ 
-      error: error.message,
-      details: 'Redis connection failed. Please check environment variables.'
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
