@@ -213,6 +213,12 @@ body {
   background: #10b981; /* Done 綠色 */
 }
 
+.floating-btn-archive {
+  right: 2rem;
+  bottom: 6rem; /* 在 Done 按鈕上方 */
+  background: #6366f1; /* Archive 紫色 */
+}
+
 .floating-btn .badge {
   position: absolute;
   top: -4px;
@@ -427,4 +433,37 @@ body {
   font-size: 0.875rem;
   color: #94a3b8;
   font-style: italic;
+}
+
+/* 歷史區樣式 */
+.archived-task-card {
+  background: var(--column-bg);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-left: 4px solid #6366f1;
+  opacity: 0.8;
+}
+
+.restore-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.restore-btn:hover {
+  background: #059669;
+}
+
+.archive-meta {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  display: flex;
+  gap: 1rem;
 }

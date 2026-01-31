@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Save, Pencil, Trash2, Clock, CheckCircle, X, History } from 'lucide-react';
+import { Plus, GripVertical, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive } from 'lucide-react';
 import './App.css';
 
 // 主版面顯示的四個欄位
@@ -32,6 +32,7 @@ const MAIN_COLUMNS = [
 const FLOATING_COLUMNS = [
   { id: 'pending', title: 'Pending (有待確認議題)', icon: Clock },
   { id: 'done', title: 'Done (結案)', icon: CheckCircle },
+  { id: 'archived', title: 'Archive (歷史區)', icon: Archive },
 ];
 
 // 所有欄位（用於拖放）
@@ -147,8 +148,38 @@ export default function App() {
       setLoading(true);
       const response = await fetch(API_URL);
       if (response.ok) {
-        const data = await response.json();
+        let data = await response.json();
+        
+        // 自動歸檔：檢查 Done 任務是否超過 12 小時
+        const now = Date.now();
+        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+        let needsSave = false;
+        
+        data = data.map(task => {
+          if (task.status === 'done' && task.updatedAt) {
+            const timeSinceUpdate = now - task.updatedAt;
+            if (timeSinceUpdate > TWELVE_HOURS) {
+              needsSave = true;
+              return {
+                ...task,
+                status: 'archived',
+                archivedAt: now,
+              };
+            }
+          }
+          return task;
+        });
+        
         setTasks(data);
+        
+        // 如果有任務被歸檔，自動儲存
+        if (needsSave) {
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+        }
       }
     } catch (error) {
       console.error('載入任務失敗:', error);
@@ -349,9 +380,10 @@ export default function App() {
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
-  // 計算 Pending 和 Done 的任務數量
+  // 計算 Pending、Done 和 Archived 的任務數量
   const pendingCount = tasks.filter(t => t.status === 'pending').length;
   const doneCount = tasks.filter(t => t.status === 'done').length;
+  const archivedCount = tasks.filter(t => t.status === 'archived').length;
 
   if (loading) {
     return (
@@ -433,6 +465,16 @@ export default function App() {
       >
         <CheckCircle size={24} />
         {doneCount > 0 && <span className="badge">{doneCount}</span>}
+      </button>
+
+      {/* 懸浮按鈕 - Archive (右下角第二個) */}
+      <button 
+        className="floating-btn floating-btn-archive"
+        onClick={() => setOpenModal('archived')}
+        title="查看歷史區"
+      >
+        <Archive size={24} />
+        {archivedCount > 0 && <span className="badge">{archivedCount}</span>}
       </button>
 
       {/* Modal - Pending */}
@@ -585,6 +627,54 @@ export default function App() {
                   <div className="empty-state">此任務尚無歷史記錄</div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Archive */}
+      {openModal === 'archived' && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <Archive size={20} />
+                Archive (歷史區)
+              </h2>
+              <button className="modal-close" onClick={() => setOpenModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              {tasks.filter(t => t.status === 'archived').map((task) => (
+                <div key={task.id} className="archived-task-card">
+                  <div className="task-header">
+                    <div className="task-title">{task.content}</div>
+                    <button 
+                      className="restore-btn"
+                      onClick={() => {
+                        const newTasks = tasks.map(t => 
+                          t.id === task.id ? { ...t, status: 'done', updatedAt: Date.now() } : t
+                        );
+                        setTasks(newTasks);
+                        saveTasks(newTasks);
+                      }}
+                      title="恢復至 Done"
+                    >
+                      恢復
+                    </button>
+                  </div>
+                  {task.desc && <div className="task-desc">{task.desc}</div>}
+                  <div className="archive-meta">
+                    {task.archivedAt && (
+                      <span>📦 歸檔於 {new Date(task.archivedAt).toLocaleString('zh-TW')}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {tasks.filter(t => t.status === 'archived').length === 0 && (
+                <div className="empty-state">歷史區目前沒有任務</div>
+              )}
             </div>
           </div>
         </div>
