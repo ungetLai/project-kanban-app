@@ -17,17 +17,25 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Save, Pencil, Trash2 } from 'lucide-react';
+import { Plus, GripVertical, Save, Pencil, Trash2, Clock, CheckCircle, X } from 'lucide-react';
 import './App.css';
 
-const COLUMNS = [
+// 主版面顯示的四個欄位
+const MAIN_COLUMNS = [
   { id: 'backlog', title: 'BackLog (待討論)' },
   { id: 'todo', title: 'Todo (準備中)' },
   { id: 'ongoing', title: 'onGoing (執行階段)' },
-  { id: 'pending', title: 'Pending (有待確認議題)' },
   { id: 'review', title: 'Review (任務驗收)' },
-  { id: 'done', title: 'Done (結案)' },
 ];
+
+// 懸浮區塊（不在主版面顯示）
+const FLOATING_COLUMNS = [
+  { id: 'pending', title: 'Pending (有待確認議題)', icon: Clock },
+  { id: 'done', title: 'Done (結案)', icon: CheckCircle },
+];
+
+// 所有欄位（用於拖放）
+const ALL_COLUMNS = [...MAIN_COLUMNS, ...FLOATING_COLUMNS];
 
 const API_URL = '/api/tasks';
 
@@ -107,6 +115,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [openModal, setOpenModal] = useState(null); // 'pending' 或 'done'
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -220,7 +229,7 @@ export default function App() {
     if (!activeTask) return;
 
     const overId = over.id;
-    const overColumn = COLUMNS.find(c => c.id === overId);
+    const overColumn = ALL_COLUMNS.find(c => c.id === overId);
     
     if (overColumn) {
       if (activeTask.status !== overId) {
@@ -262,6 +271,10 @@ export default function App() {
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
+  // 計算 Pending 和 Done 的任務數量
+  const pendingCount = tasks.filter(t => t.status === 'pending').length;
+  const doneCount = tasks.filter(t => t.status === 'done').length;
+
   if (loading) {
     return (
       <div className="kanban-container">
@@ -293,7 +306,7 @@ export default function App() {
           onDragOver={onDragOver}
           onDragEnd={onDragEnd}
         >
-          {COLUMNS.map((col) => (
+          {MAIN_COLUMNS.map((col) => (
             <Column
               key={col.id}
               id={col.id}
@@ -322,6 +335,118 @@ export default function App() {
           </DragOverlay>
         </DndContext>
       </div>
+
+      {/* 懸浮按鈕 - Pending (左下角) */}
+      <button 
+        className="floating-btn floating-btn-left"
+        onClick={() => setOpenModal('pending')}
+        title="查看 Pending 任務"
+      >
+        <Clock size={24} />
+        {pendingCount > 0 && <span className="badge">{pendingCount}</span>}
+      </button>
+
+      {/* 懸浮按鈕 - Done (右下角) */}
+      <button 
+        className="floating-btn floating-btn-right"
+        onClick={() => setOpenModal('done')}
+        title="查看 Done 任務"
+      >
+        <CheckCircle size={24} />
+        {doneCount > 0 && <span className="badge">{doneCount}</span>}
+      </button>
+
+      {/* Modal - Pending */}
+      {openModal === 'pending' && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <Clock size={20} />
+                Pending (有待確認議題)
+              </h2>
+              <button className="modal-close" onClick={() => setOpenModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDragEnd={onDragEnd}
+              >
+                <SortableContext 
+                  items={tasks.filter(t => t.status === 'pending').map(t => t.id)} 
+                  strategy={verticalListSortingStrategy}
+                >
+                  {tasks.filter(t => t.status === 'pending').map((task) => (
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      onEdit={handleEditTask}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              {tasks.filter(t => t.status === 'pending').length === 0 && (
+                <div className="empty-state">目前沒有 Pending 任務</div>
+              )}
+              <button className="add-task-btn" onClick={() => handleAddTask('pending')}>
+                <Plus size={16} /> 新增任務
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - Done */}
+      {openModal === 'done' && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <CheckCircle size={20} />
+                Done (結案)
+              </h2>
+              <button className="modal-close" onClick={() => setOpenModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDragEnd={onDragEnd}
+              >
+                <SortableContext 
+                  items={tasks.filter(t => t.status === 'done').map(t => t.id)} 
+                  strategy={verticalListSortingStrategy}
+                >
+                  {tasks.filter(t => t.status === 'done').map((task) => (
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      onEdit={handleEditTask}
+                      onDelete={handleDeleteTask}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              {tasks.filter(t => t.status === 'done').length === 0 && (
+                <div className="empty-state">目前沒有 Done 任務</div>
+              )}
+              <button className="add-task-btn" onClick={() => handleAddTask('done')}>
+                <Plus size={16} /> 新增任務
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
