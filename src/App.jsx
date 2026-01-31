@@ -18,7 +18,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive, User, Lock } from 'lucide-react';
+import { Plus, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive, User, Lock, Sun, Moon } from 'lucide-react';
 import './App.css';
 import { ALLOWED_USERS } from './AllowedUsers';
 
@@ -49,9 +49,20 @@ function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style} className="task-card" {...attributes} {...listeners}>
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="task-card" 
+      {...attributes} 
+      {...listeners}
+      onDoubleClick={(e) => { e.stopPropagation(); onEdit(task.id); }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(task.id); }}
+    >
       <div className="task-header">
-        <div className="task-title">{task.content}</div>
+        <div className="task-title">
+          {task.priority && <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>}
+          {task.content}
+        </div>
         <div className="task-actions" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
           <button className="task-action-btn" onClick={() => onViewHistory(task)} title="查看歷史"><History size={14} /></button>
           <button className="task-action-btn" onClick={() => onEdit(task.id)} title="編輯"><Pencil size={14} /></button>
@@ -59,6 +70,11 @@ function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
         </div>
       </div>
       {task.desc && <div className="task-desc">{task.desc}</div>}
+      {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
+        <div className="task-tags">
+          {task.tags.map((tag, i) => <span key={i} className="task-tag">{tag}</span>)}
+        </div>
+      )}
       <div className="task-footer" style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
         {task.updatedBy && <span>By {task.updatedBy}</span>}
       </div>
@@ -127,6 +143,15 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState('');
   const [autoRefreshTime, setAutoRefreshTime] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(null);
+  const [darkMode, setDarkMode] = useState(true);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -212,12 +237,18 @@ export default function App() {
     const content = prompt('請輸入任務標題：');
     if (!content) return;
     const desc = prompt('請輸入任務描述（選填）：');
+    const priority = prompt('請輸入優先級 (P0-P3, 選填):');
+    const tagsInput = prompt('請輸入標籤 (逗號分隔, 選填):');
+    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+
     const now = Date.now();
     const normalizedStatus = status.toLowerCase().trim();
     const newTask = {
       id: now.toString(),
       content,
       desc: desc || '',
+      priority: priority || '',
+      tags,
       status: normalizedStatus,
       createdAt: now,
       updatedAt: now,
@@ -250,9 +281,18 @@ export default function App() {
     if (content === null) return;
     const desc = prompt('修改任務描述：', task.desc || '');
     if (desc === null) return;
-    if (content === task.content && desc === task.desc) return;
-    const history = [{ timestamp: Date.now(), field: 'edit', oldValue: task.content, newValue: content, operator: currentUser }, ...(task.history || [])].slice(0, 50);
-    updateTask({ ...task, content, desc, updatedAt: Date.now(), updatedBy: currentUser, history });
+    const priority = prompt('修改優先級 (P0-P3):', task.priority || '');
+    if (priority === null) return;
+    const tagsInput = prompt('修改標籤 (逗號分隔):', (task.tags || []).join(', '));
+    if (tagsInput === null) return;
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+
+    // Simple check if anything changed
+    const isChanged = content !== task.content || desc !== task.desc || priority !== task.priority || JSON.stringify(tags) !== JSON.stringify(task.tags || []);
+    if (!isChanged) return;
+
+    const history = [{ timestamp: Date.now(), field: 'edit', oldValue: 'details', newValue: 'updated', operator: currentUser }, ...(task.history || [])].slice(0, 50);
+    updateTask({ ...task, content, desc, priority, tags, updatedAt: Date.now(), updatedBy: currentUser, history });
   };
 
   const handleDeleteTask = async (taskId) => {
@@ -276,6 +316,25 @@ export default function App() {
     const { active, over } = event;
     setActiveId(null);
     if (!over) return;
+
+    // Haptic & Audio Feedback
+    if (navigator.vibrate) navigator.vibrate(50);
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      }
+    } catch (e) { /* ignore */ }
+
     let targetStatus = null;
     if (over.id.startsWith('floating-')) {
       targetStatus = (over.data.current.status || '').toLowerCase().trim();
@@ -322,6 +381,9 @@ export default function App() {
       <header className="kanban-header">
         <h1>🦞 專案看板</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button className="dark-toggle" onClick={() => setDarkMode(!darkMode)} title="切換主題">
+            {darkMode ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
           <div className="current-user" style={{ fontSize: '0.9rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>👤 {currentUser}</div>
           <div className="save-indicator">
             {saving ? <span>💾...</span> : lastSaved ? <span>✅ {lastSaved.toLocaleTimeString()}</span> : null}
