@@ -44,10 +44,13 @@ export default async function handler(req, res) {
     });
 
     const TASKS_KEY = 'kanban:tasks';
+    const MIGRATION_KEY = 'kanban:migration_v1_system_tasks';
     
     // Helper to get tasks
     const getTasks = async () => {
       let tasks = await redis.get(TASKS_KEY);
+      let parsedTasks = [];
+
       if (!tasks) {
         const initialTasks = [
           { id: '1', content: '設計看板架構', desc: '定義六個主要流程階段', status: 'done' },
@@ -56,9 +59,39 @@ export default async function handler(req, res) {
           { id: '4', content: '測試儲存功能', desc: '確認資料可以正確儲存和讀取', status: 'todo' },
         ];
         await redis.set(TASKS_KEY, JSON.stringify(initialTasks));
-        return initialTasks;
+        parsedTasks = initialTasks;
+      } else {
+        parsedTasks = typeof tasks === 'string' ? JSON.parse(tasks) : tasks;
       }
-      return typeof tasks === 'string' ? JSON.parse(tasks) : tasks;
+
+      // Migration: Inject System Tasks
+      // Check if migration flag exists
+      const migrated = await redis.get(MIGRATION_KEY);
+      
+      if (!migrated) {
+         const now = Date.now();
+         const systemTasks = [
+          { id: 'feat-crud', content: '[Feature] 任務編輯與刪除 (CRUD)', desc: '實作雙擊編輯與右鍵刪除功能。目前缺少的基礎功能。', status: 'backlog', createdAt: now },
+          { id: 'feat-details', content: '[Feature] 任務詳細資訊擴充', desc: '擴充資料結構支援 Priority (P0-P3) 與 Tags (Frontend, Backend, etc)。', status: 'backlog', createdAt: now },
+          { id: 'ai-breaker', content: '[AI] 智能任務拆解 (Task Breaker)', desc: '整合 LLM，將 Backlog 的模糊需求自動拆解為具體 Sub-tasks。', status: 'backlog', createdAt: now },
+          { id: 'ai-tagging', content: '[AI] 智能標籤建議', desc: '根據任務內容自動推薦標籤 (Tagging)。', status: 'backlog', createdAt: now },
+          { id: 'ux-haptic', content: '[UX] 拖曳體感優化 (Haptic/Audio)', desc: '增加拖曳成功的音效回饋與微震動。', status: 'backlog', createdAt: now },
+          { id: 'ux-dark', content: '[UX] 暗黑模式 (Dark Mode)', desc: '支援系統切換與手動切換深色主題。', status: 'backlog', createdAt: now },
+          { id: 'infra-redis', content: '[Infra] Redis 資料模型優化', desc: '評估 Search 需求，優化 Key-Value 結構或引入 JSON 索引。', status: 'backlog', createdAt: now },
+         ];
+
+         const existingIds = new Set(parsedTasks.map(t => t.id));
+         const toAdd = systemTasks.filter(t => !existingIds.has(t.id));
+         
+         if (toAdd.length > 0) {
+            parsedTasks = [...parsedTasks, ...toAdd];
+            await redis.set(TASKS_KEY, JSON.stringify(parsedTasks));
+         }
+         // Mark as migrated
+         await redis.set(MIGRATION_KEY, 'true');
+      }
+
+      return parsedTasks;
     };
 
     if (req.method === 'GET') {
