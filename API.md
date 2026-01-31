@@ -3,6 +3,29 @@
 ## Overview
 Base URL: `/api/tasks`
 
+## Authentication
+
+All API requests require authentication via Query Parameters.
+
+### Standard User
+- `tid`: User's Telegram ID
+- `uname`: User's Telegram Username
+
+### Bot (幫眾/機器人)
+If you are a bot, use the **專屬密令 (Secret Command)** rule:
+- `tid`: Bot's ID
+- `uname`: Bot's Username
+- `bot`: Must be `True`
+- `rule`: A generated string based on the following formula:
+  `rule = username + id + reverse(id) + prefix4(username)`
+
+**Example for Bot:**
+- `uname`: `nexora_z_bot`
+- `tid`: `8547553102`
+- `rule`: `nexora_z_bot85475531022013557458nexo`
+
+---
+
 ## Endpoints
 
 ### 1. Get Tasks
