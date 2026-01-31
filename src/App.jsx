@@ -42,9 +42,6 @@ const FLOATING_COLUMNS = [
 
 const ALL_COLUMNS = [...MAIN_COLUMNS, ...FLOATING_COLUMNS];
 
-// Users
-const USERS = ['賴大叔', '幫主', '默織者', '影帳司', 'Guest'];
-
 // --- Components ---
 
 function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
@@ -173,7 +170,7 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [openModal, setOpenModal] = useState(null); 
   const [selectedTask, setSelectedTask] = useState(null);
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem('kanbanUser') || '默織者');
+  const [currentUser, setCurrentUser] = useState('');
   const [autoRefreshTime, setAutoRefreshTime] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(null);
 
@@ -191,6 +188,7 @@ export default function App() {
     const user = ALLOWED_USERS.find(u => u.id === tid && u.username === uname);
     if (user) {
       setIsAuthorized(true);
+      setCurrentUser(uname || 'Unknown');
       loadAllTasks(tid, uname);
     } else {
       setIsAuthorized(false);
@@ -261,17 +259,9 @@ export default function App() {
     return () => clearInterval(interval);
   }, [activeId, openModal, isAuthorized]);
 
-  useEffect(() => {
-    localStorage.setItem('kanbanUser', currentUser);
-  }, [currentUser]);
-
 
   // --- Handlers ---
   
-  const handleUserChange = (e) => {
-    setCurrentUser(e.target.value);
-  };
-
   const handleAddTask = async (status) => {
     const content = prompt('請輸入任務標題：');
     if (!content) return;
@@ -488,9 +478,9 @@ export default function App() {
       <header className="kanban-header">
         <h1>🦞 專案看板</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <select value={currentUser} onChange={handleUserChange} style={{ padding: '0.3rem' }}>
-                {USERS.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <div className="current-user" style={{ fontSize: '0.9rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+              👤 {currentUser}
+            </div>
             <div className="save-indicator">
             {saving ? <span>💾...</span> : lastSaved ? <span>✅ {lastSaved.toLocaleTimeString()}</span> : null}
             {autoRefreshTime && <span title="上次自動重整">🔄 {autoRefreshTime.toLocaleTimeString()}</span>}
