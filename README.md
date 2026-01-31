@@ -59,35 +59,19 @@ git push origin main
 
 ## 🔧 API Endpoints
 
-### GET /api/tasks
-取得所有任務
+詳細 API 文件請參閱 [API.md](./API.md)。
 
-**回應範例：**
-```json
-[
-  {
-    "id": "1",
-    "content": "設計看板架構",
-    "desc": "定義六個主要流程階段",
-    "status": "done"
-  }
-]
-```
+### GET /api/tasks
+取得所有任務 (支援過濾)
 
 ### POST /api/tasks
-儲存任務列表
+新增任務
 
-**請求範例：**
-```json
-[
-  {
-    "id": "1",
-    "content": "設計看板架構",
-    "desc": "定義六個主要流程階段",
-    "status": "done"
-  }
-]
-```
+### PUT /api/tasks
+更新任務
+
+### DELETE /api/tasks
+刪除任務
 
 ## 📁 專案結構
 
