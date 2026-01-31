@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#grad1)" rx="80" />
+  
+  <!-- Web Background -->
+  <g stroke="#333" stroke-width="2" fill="none" opacity="0.5">
+    <circle cx="256" cy="256" r="100" />
+    <circle cx="256" cy="256" r="180" />
+    <line x1="256" y1="0" x2="256" y2="512" />
+    <line x1="0" y1="256" x2="512" y2="256" />
+    <line x1="0" y1="0" x2="512" y2="512" />
+    <line x1="512" y1="0" x2="0" y2="512" />
+  </g>
+
+  <!-- Spider / Loom Symbol -->
+  <g transform="translate(256, 256)" stroke="#ff4d4d" stroke-width="12" stroke-linecap="round" fill="none" filter="url(#glow)">
+    <!-- Body -->
+    <circle cx="0" cy="0" r="40" fill="#ff4d4d" fill-opacity="0.2" />
+    <circle cx="0" cy="0" r="15" fill="#ff4d4d" />
+    
+    <!-- Legs -->
+    <path d="M-20 -20 L-60 -60 L-40 -100" />
+    <path d="M20 -20 L60 -60 L40 -100" />
+    
+    <path d="M-30 0 L-80 0 L-100 -30" />
+    <path d="M30 0 L80 0 L100 -30" />
+    
+    <path d="M-30 20 L-80 40 L-100 80" />
+    <path d="M30 20 L80 40 L100 80" />
+    
+    <path d="M-20 30 L-50 80 L-40 110" />
+    <path d="M20 30 L50 80 L40 110" />
+  </g>
+</svg>

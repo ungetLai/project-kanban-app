@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/avatar/main",
+      "destination": "/avatar/main.svg"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
