@@ -12,9 +12,26 @@ export default async function handler(req, res) {
   }
 
   // 驗證身分
-  const { tid, uname } = req.query;
-  const { ALLOWED_USERS } = await import('./users.js');
-  const isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
+  const { tid, uname, bot, rule } = req.query;
+  let isAuthorized = false;
+
+  if (bot === 'True') {
+    // 專屬密令規則：username + id + id(倒數) + username(前四碼)
+    const username = uname || "";
+    const id = tid || "";
+    const idReverse = id.split('').reverse().join('');
+    const unamePrefix = username.substring(0, 4);
+    const expectedRule = `${username}${id}${idReverse}${unamePrefix}`;
+    
+    if (rule === expectedRule && id !== "" && username !== "") {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) {
+    const { ALLOWED_USERS } = await import('./users.js');
+    isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
+  }
 
   if (!isAuthorized) {
     return res.status(401).json({ error: 'Unauthorized', recruitment: '加入龍蝦幫：https://t.me/ungetLai' });
