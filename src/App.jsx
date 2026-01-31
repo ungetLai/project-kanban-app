@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, GripVertical, Save, Pencil, Trash2, Clock, CheckCircle, X } from 'lucide-react';
+import { Plus, GripVertical, Save, Pencil, Trash2, Clock, CheckCircle, X, History } from 'lucide-react';
 import './App.css';
 
 // 主版面顯示的四個欄位
@@ -39,7 +39,7 @@ const ALL_COLUMNS = [...MAIN_COLUMNS, ...FLOATING_COLUMNS];
 
 const API_URL = '/api/tasks';
 
-function TaskCard({ task, onEdit, onDelete }) {
+function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
   const {
     attributes,
     listeners,
@@ -62,6 +62,13 @@ function TaskCard({ task, onEdit, onDelete }) {
         <div className="task-actions" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
           <button 
             className="task-action-btn" 
+            onClick={() => onViewHistory(task)} 
+            title="查看歷史"
+          >
+            <History size={14} />
+          </button>
+          <button 
+            className="task-action-btn" 
             onClick={() => onEdit(task.id)} 
             title="編輯"
           >
@@ -81,7 +88,7 @@ function TaskCard({ task, onEdit, onDelete }) {
   );
 }
 
-function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask }) {
+function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask, onViewHistory }) {
   const { setNodeRef } = useSortable({ id });
 
   return (
@@ -98,6 +105,7 @@ function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask }) {
               task={task} 
               onEdit={onEditTask}
               onDelete={onDeleteTask}
+              onViewHistory={onViewHistory}
             />
           ))}
         </SortableContext>
@@ -115,7 +123,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [openModal, setOpenModal] = useState(null); // 'pending' 或 'done'
+  const [openModal, setOpenModal] = useState(null); // 'pending' 或 'done' 或 'history'
+  const [selectedTask, setSelectedTask] = useState(null); // 用於查看歷史的任務
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -178,16 +187,41 @@ export default function App() {
 
     const desc = prompt('請輸入任務描述（選填）：');
     
+    const now = Date.now();
     const newTask = {
-      id: Date.now().toString(),
+      id: now.toString(),
       content,
       desc: desc || '',
       status,
+      createdAt: now,
+      updatedAt: now,
+      history: [{
+        timestamp: now,
+        field: 'created',
+        oldValue: null,
+        newValue: `任務建立於 ${status}`,
+      }],
     };
 
     const newTasks = [...tasks, newTask];
     setTasks(newTasks);
     saveTasks(newTasks);
+  };
+
+  // 添加歷史記錄
+  const addHistory = (task, field, oldValue, newValue) => {
+    const history = task.history || [];
+    const newHistory = [
+      {
+        timestamp: Date.now(),
+        field,
+        oldValue,
+        newValue,
+      },
+      ...history, // 新的在前面
+    ].slice(0, 50); // 保留最近 50 筆
+    
+    return newHistory;
   };
 
   // 修改任務
@@ -201,8 +235,26 @@ export default function App() {
     const desc = prompt('修改任務描述：', task.desc || '');
     if (desc === null) return;
 
+    let history = task.history || [];
+    
+    // 標題變更
+    if (content !== task.content) {
+      history = addHistory(task, 'content', task.content, content);
+    }
+    
+    // 描述變更
+    if (desc !== task.desc) {
+      history = addHistory({ ...task, history }, 'desc', task.desc || '', desc);
+    }
+
     const newTasks = tasks.map(t => 
-      t.id === taskId ? { ...t, content, desc } : t
+      t.id === taskId ? { 
+        ...t, 
+        content, 
+        desc,
+        updatedAt: Date.now(),
+        history,
+      } : t
     );
     setTasks(newTasks);
     saveTasks(newTasks);
@@ -215,6 +267,12 @@ export default function App() {
     const newTasks = tasks.filter(t => t.id !== taskId);
     setTasks(newTasks);
     saveTasks(newTasks);
+  };
+
+  // 查看任務歷史
+  const handleViewHistory = (task) => {
+    setSelectedTask(task);
+    setOpenModal('history');
   };
 
   const onDragStart = (event) => {
@@ -252,6 +310,7 @@ export default function App() {
     }
 
     let newTasks = tasks;
+    const activeTask = tasks.find(t => t.id === active.id);
 
     if (active.id !== over.id) {
       const oldIndex = tasks.findIndex((t) => t.id === active.id);
@@ -259,10 +318,29 @@ export default function App() {
       
       if (newIndex !== -1) {
         newTasks = arrayMove(tasks, oldIndex, newIndex);
-        setTasks(newTasks);
       }
     }
 
+    // 檢查狀態是否變更
+    const finalTask = newTasks.find(t => t.id === active.id);
+    if (finalTask && activeTask && finalTask.status !== activeTask.status) {
+      const history = addHistory(
+        finalTask,
+        'status',
+        activeTask.status,
+        finalTask.status
+      );
+      
+      newTasks = newTasks.map(t => 
+        t.id === active.id ? {
+          ...t,
+          updatedAt: Date.now(),
+          history,
+        } : t
+      );
+    }
+
+    setTasks(newTasks);
     setActiveId(null);
     
     // 拖曳結束後自動儲存
@@ -315,6 +393,7 @@ export default function App() {
               onAddTask={handleAddTask}
               onEditTask={handleEditTask}
               onDeleteTask={handleDeleteTask}
+              onViewHistory={handleViewHistory}
             />
           ))}
           <DragOverlay dropAnimation={{
@@ -387,6 +466,7 @@ export default function App() {
                       task={task} 
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
+                      onViewHistory={handleViewHistory}
                     />
                   ))}
                 </SortableContext>
@@ -433,6 +513,7 @@ export default function App() {
                       task={task} 
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
+                      onViewHistory={handleViewHistory}
                     />
                   ))}
                 </SortableContext>
@@ -443,6 +524,67 @@ export default function App() {
               <button className="add-task-btn" onClick={() => handleAddTask('done')}>
                 <Plus size={16} /> 新增任務
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal - History */}
+      {openModal === 'history' && selectedTask && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <History size={20} />
+                任務歷史記錄
+              </h2>
+              <button className="modal-close" onClick={() => setOpenModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="history-task-info">
+                <h3>{selectedTask.content}</h3>
+                {selectedTask.desc && <p className="task-desc">{selectedTask.desc}</p>}
+              </div>
+              
+              <div className="history-timeline">
+                {selectedTask.history && selectedTask.history.length > 0 ? (
+                  selectedTask.history.map((record, index) => (
+                    <div key={index} className="history-item">
+                      <div className="history-timestamp">
+                        {new Date(record.timestamp).toLocaleString('zh-TW', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                      <div className="history-content">
+                        <div className="history-field">
+                          {record.field === 'created' && '📝 任務建立'}
+                          {record.field === 'content' && '✏️ 標題修改'}
+                          {record.field === 'desc' && '📄 描述修改'}
+                          {record.field === 'status' && '🔄 狀態變更'}
+                        </div>
+                        {record.oldValue !== null && (
+                          <div className="history-change">
+                            <span className="old-value">{record.oldValue}</span>
+                            <span className="arrow">→</span>
+                            <span className="new-value">{record.newValue}</span>
+                          </div>
+                        )}
+                        {record.oldValue === null && (
+                          <div className="history-note">{record.newValue}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state">此任務尚無歷史記錄</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
