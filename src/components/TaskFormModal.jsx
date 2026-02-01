@@ -1,0 +1,132 @@
+import React, { useState, useEffect } from 'react';
+import { X, Save } from 'lucide-react';
+
+export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, mode }) {
+  const [formData, setFormData] = useState({
+    content: '',
+    desc: '',
+    priority: '',
+    tags: ''
+  });
+
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setFormData({
+        content: initialData.content || '',
+        desc: initialData.desc || '',
+        priority: initialData.priority || '',
+        tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : ''
+      });
+    } else if (isOpen) {
+      setFormData({
+        content: '',
+        desc: '',
+        priority: '',
+        tags: ''
+      });
+    }
+  }, [isOpen, initialData]);
+
+  if (!isOpen) return null;
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.content.trim()) {
+      alert('任務標題為必填項目');
+      return;
+    }
+    
+    // Process tags
+    const processedTags = formData.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    onSubmit({
+      ...formData,
+      tags: processedTags
+    });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content task-form-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{mode === 'create' ? '新增任務' : '編輯任務'}</h2>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="task-form">
+          <div className="form-group">
+            <label htmlFor="content">任務標題 <span className="required">*</span></label>
+            <input
+              type="text"
+              id="content"
+              name="content"
+              value={formData.content}
+              onChange={handleChange}
+              placeholder="例如：實作登入功能"
+              autoFocus
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="priority">優先級</label>
+            <select
+              id="priority"
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              className="form-select"
+            >
+              <option value="">無</option>
+              <option value="P0">P0 (最高 - Critical)</option>
+              <option value="P1">P1 (高 - High)</option>
+              <option value="P2">P2 (中 - Medium)</option>
+              <option value="P3">P3 (低 - Low)</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="tags">標籤 (以逗號分隔)</label>
+            <input
+              type="text"
+              id="tags"
+              name="tags"
+              value={formData.tags}
+              onChange={handleChange}
+              placeholder="例如：Frontend, Bug, v1.0"
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="desc">任務描述</label>
+            <textarea
+              id="desc"
+              name="desc"
+              value={formData.desc}
+              onChange={handleChange}
+              placeholder="詳細說明任務內容..."
+              rows={5}
+              className="form-textarea"
+            />
+          </div>
+
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={onClose}>取消</button>
+            <button type="submit" className="btn-primary">
+              <Save size={16} /> {mode === 'create' ? '建立' : '儲存'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -132,6 +132,9 @@ function Unauthorized() {
   );
 }
 
+import TaskFormModal from './components/TaskFormModal';
+import './components/TaskFormModal.css';
+
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -139,6 +142,8 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [openModal, setOpenModal] = useState(null); 
+  const [formMode, setFormMode] = useState('create'); // 'create' or 'edit'
+  const [targetColumn, setTargetColumn] = useState('backlog');
   const [selectedTask, setSelectedTask] = useState(null);
   const [currentUser, setCurrentUser] = useState('');
   const [autoRefreshTime, setAutoRefreshTime] = useState(null);
@@ -234,65 +239,75 @@ export default function App() {
   };
 
   const handleAddTask = async (status) => {
-    const content = prompt('請輸入任務標題：');
-    if (!content) return;
-    const desc = prompt('請輸入任務描述（選填）：');
-    const priority = prompt('請輸入優先級 (P0-P3, 選填):');
-    const tagsInput = prompt('請輸入標籤 (逗號分隔, 選填):');
-    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+    setTargetColumn(status);
+    setFormMode('create');
+    setSelectedTask(null);
+    setOpenModal('form');
+  };
 
-    const now = Date.now();
-    const normalizedStatus = status.toLowerCase().trim();
-    const newTask = {
-      id: now.toString(),
-      content,
-      desc: desc || '',
-      priority: priority || '',
-      tags,
-      status: normalizedStatus,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: currentUser,
-      updatedBy: currentUser,
-      history: [{ timestamp: now, field: 'created', oldValue: null, newValue: `建立於 ${normalizedStatus} by ${currentUser}` }]
-    };
-    setTasks(prev => [...prev, newTask]);
-    try {
-      setSaving(true);
-      const params = new URLSearchParams(window.location.search);
-      await fetch(`${API_URL}?tid=${params.get('tid')}&uname=${params.get('uname')}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTask)
+  const onFormSubmit = async (formData) => {
+    if (formMode === 'create') {
+      const now = Date.now();
+      const normalizedStatus = targetColumn.toLowerCase().trim();
+      const newTask = {
+        id: now.toString(),
+        content: formData.content,
+        desc: formData.desc || '',
+        priority: formData.priority || '',
+        tags: formData.tags || [],
+        status: normalizedStatus,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: currentUser,
+        updatedBy: currentUser,
+        history: [{ timestamp: now, field: 'created', oldValue: null, newValue: `建立於 ${normalizedStatus} by ${currentUser}` }]
+      };
+      setTasks(prev => [...prev, newTask]);
+      try {
+        setSaving(true);
+        const params = new URLSearchParams(window.location.search);
+        await fetch(`${API_URL}?tid=${params.get('tid')}&uname=${params.get('uname')}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTask)
+        });
+        setLastSaved(new Date());
+      } catch (err) {
+        console.error(err);
+        loadAllTasks(false);
+      } finally {
+        setSaving(false);
+      }
+    } else if (formMode === 'edit' && selectedTask) {
+      const task = selectedTask;
+      // Check changes
+      const isChanged = formData.content !== task.content || 
+                        formData.desc !== task.desc || 
+                        formData.priority !== task.priority || 
+                        JSON.stringify(formData.tags) !== JSON.stringify(task.tags || []);
+      
+      if (!isChanged) return;
+
+      const history = [{ timestamp: Date.now(), field: 'edit', oldValue: 'details', newValue: 'updated', operator: currentUser }, ...(task.history || [])].slice(0, 50);
+      updateTask({ 
+        ...task, 
+        content: formData.content, 
+        desc: formData.desc, 
+        priority: formData.priority, 
+        tags: formData.tags, 
+        updatedAt: Date.now(), 
+        updatedBy: currentUser, 
+        history 
       });
-      setLastSaved(new Date());
-    } catch (err) {
-      console.error(err);
-      loadAllTasks(false);
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleEditTask = (taskId) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    const content = prompt('修改任務標題：', task.content);
-    if (content === null) return;
-    const desc = prompt('修改任務描述：', task.desc || '');
-    if (desc === null) return;
-    const priority = prompt('修改優先級 (P0-P3):', task.priority || '');
-    if (priority === null) return;
-    const tagsInput = prompt('修改標籤 (逗號分隔):', (task.tags || []).join(', '));
-    if (tagsInput === null) return;
-    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
-
-    // Simple check if anything changed
-    const isChanged = content !== task.content || desc !== task.desc || priority !== task.priority || JSON.stringify(tags) !== JSON.stringify(task.tags || []);
-    if (!isChanged) return;
-
-    const history = [{ timestamp: Date.now(), field: 'edit', oldValue: 'details', newValue: 'updated', operator: currentUser }, ...(task.history || [])].slice(0, 50);
-    updateTask({ ...task, content, desc, priority, tags, updatedAt: Date.now(), updatedBy: currentUser, history });
+    setSelectedTask(task);
+    setFormMode('edit');
+    setOpenModal('form');
   };
 
   const handleDeleteTask = async (taskId) => {
@@ -403,7 +418,15 @@ export default function App() {
         <FloatingDropZone id="done" icon={CheckCircle} count={taskCounts['done']} onClick={() => setOpenModal('done')} />
         <FloatingDropZone id="archived" icon={Archive} count={taskCounts['archived']} onClick={() => setOpenModal('archived')} />
 
-        {openModal && (
+        <TaskFormModal 
+          isOpen={openModal === 'form'} 
+          onClose={() => setOpenModal(null)} 
+          onSubmit={onFormSubmit}
+          initialData={selectedTask}
+          mode={formMode}
+        />
+
+        {openModal && openModal !== 'form' && (
           <div className="modal-overlay" onClick={() => setOpenModal(null)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
