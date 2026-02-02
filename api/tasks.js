@@ -56,6 +56,24 @@ export default async function handler(req, res) {
     const TASKS_KEY = 'kanban:tasks';
     const MIGRATION_KEY = 'kanban:migration_v1_system_tasks';
     
+    // Helper to notify Signal Harbor
+    const notifySignalHarbor = async (event, task) => {
+      const url = process.env.SIGNAL_HARBOR_URL;
+      if (!url) return;
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Kanban-Event': event
+          },
+          body: JSON.stringify(task)
+        });
+      } catch (err) {
+        console.error('Signal Harbor Notification Error:', err);
+      }
+    };
+
     // Helper to get tasks
     const getTasks = async () => {
       let tasks = await redis.get(TASKS_KEY);
@@ -137,6 +155,12 @@ export default async function handler(req, res) {
         
         tasks.push(newTask);
         await redis.set(TASKS_KEY, JSON.stringify(tasks));
+
+        // Webhook Trigger: Backlog Creation
+        if (newTask.status === 'backlog') {
+          await notifySignalHarbor('task_created', newTask);
+        }
+
         return res.status(200).json(newTask);
       }
       
@@ -150,10 +174,17 @@ export default async function handler(req, res) {
       if (index === -1) return res.status(404).json({ error: 'Task not found' });
 
       // Normalize status if updated
+      const oldStatus = (tasks[index].status || '').toLowerCase().trim();
       if (updateData.status) updateData.status = updateData.status.toLowerCase().trim();
 
       tasks[index] = { ...tasks[index], ...updateData, updatedAt: Date.now() };
       await redis.set(TASKS_KEY, JSON.stringify(tasks));
+
+      // Webhook Trigger: Moving to Todo
+      if (updateData.status === 'todo' && oldStatus !== 'todo') {
+        await notifySignalHarbor('task_moved', tasks[index]);
+      }
+
       return res.status(200).json(tasks[index]);
 
     } else if (req.method === 'DELETE') {
