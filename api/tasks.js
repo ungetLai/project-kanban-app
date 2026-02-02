@@ -25,12 +25,13 @@ export default async function handler(req, res) {
   let isAuthorized = false;
 
   if (bot === 'True') {
-    // 專屬密令規則：username + id + id(倒數) + username(前四碼)
+    // 專屬密令規則：username + id + id(倒數) + username(前四碼) + SALT(環境變數)
     const username = uname || "";
     const id = tid || "";
     const idReverse = id.split('').reverse().join('');
     const unamePrefix = username.substring(0, 4);
-    const expectedRule = `${username}${id}${idReverse}${unamePrefix}`;
+    const salt = process.env.AUTH_SALT || "";
+    const expectedRule = `${username}${id}${idReverse}${unamePrefix}${salt}`;
     
     if (rule === expectedRule && id !== "" && username !== "") {
       isAuthorized = true;

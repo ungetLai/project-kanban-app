@@ -1,126 +1,89 @@
-# 🦞 專案開發看板 (PARA 擴充版)
+# 🦞 龍蝦幫專案看板 (Lobster Kanban App)
 
-一個支援拖放功能的 Kanban 看板專案管理工具，整合 Upstash Redis 儲存。
+> **「江湖險惡，唯有看板能救你的專案。」**  
+> 這是一個為龍蝦幫（Lobster Gang）量身打造的高級專案管理工具，集成了強大的拖放功能、即時同步與 AI 擴展預留。
 
-## ✨ 功能
+![License](https://img.shields.io/github/license/ungetLai/project-kanban-app)
+![Vercel](https://img.shields.io/badge/deployed-Vercel-black?logo=vercel)
+![Redis](https://img.shields.io/badge/database-Upstash_Redis-red?logo=redis)
 
-- ✅ 六個工作流程階段：Backlog → Todo → Ongoing → Pending → Review → Done
-- ✅ 拖放式任務管理（支援跨欄位拖曳）
-- ✅ 即時自動儲存到雲端（Upstash Redis）
-- ✅ 新增任務功能
-- ✅ 任務計數顯示
-- ✅ 響應式設計
+## ✨ 強大功能 (Feature Highlights)
 
-## 🚀 技術棧
+- 🦞 **六大流程階段**：`BackLog` → `Todo` → `onGoing` → `Pending` → `Review` → `Done` (及歷史存檔區)。
+- 🖱️ **極致拖放體驗**：基於 `@dnd-kit` 實作的流暢拖拽，支援跨欄位與排序。
+- 📝 **完整 CRUD 操作**：
+  - 雙擊卡片快速編輯。
+  - 右鍵點擊快速刪除（附帶確認）。
+  - 詳細的任務表單：支援專案分類、優先級（P0-P3）、自定義標籤。
+- 📜 **操作歷史回溯**：完整記錄任務的變更歷史，透明化協作過程。
+- 🌗 **自動暗黑模式**：質感設計，保護長時間盯著看板的眼睛。
+- ☁️ **雲端即時儲存**：整合 Upstash Redis，數據變動即時更新。
+- 🔒 **身分權限驗證**：專為龍蝦幫成員設計的 URL 參數驗證與自定義密令驗證。
 
-- **前端**: React 18 + Vite
-- **拖放**: @dnd-kit
-- **儲存**: Upstash Redis (Vercel Integration)
-- **部署**: Vercel
-- **圖示**: Lucide React
+## 🚀 技術棧 (Tech Stack)
 
-## 📦 安裝與開發
+- **核心**: [React 18](https://reactjs.org/) + [Vite](https://vitejs.dev/)
+- **拖放引擎**: [@dnd-kit](https://dnd-kit.com/)
+- **後端 (Serverless)**: [Vercel Functions](https://vercel.com/docs/functions)
+- **資料庫**: [Upstash Redis](https://upstash.com/)
+- **樣式**: Vanilla CSS (Premium Aesthetics)
+- **圖示**: [Lucide React](https://lucide.dev/)
+
+## 📦 快速開始 (Quick Start)
+
+### 1. 本地開發
 
 ```bash
 # 安裝依賴
 npm install
 
-# 本地開發
+# 複製環境變數範例並設定 (請參考 .env.example)
+cp .env.example .env
+
+# 啟動開發伺服器
 npm run dev
-
-# 建置
-npm run build
 ```
 
-## ☁️ Vercel 部署設定
+### 2. 環境變數設定
 
-### 1. 部署專案到 Vercel
+確保您的 Vercel 專案設定了以下環境變數：
+- `KV_REST_API_URL`: Upstash Redis URL
+- `KV_REST_API_TOKEN`: Upstash Redis Token
+- `ADMIN_TG_ID`: 管理員 Telegram ID
+- `ADMIN_USERNAME`: 管理員 Telegram 使用者名稱
+- `AUTH_SALT`: (選填) 加強驗證安全性的鹽值
 
-```bash
-# 推送到 GitHub
-git push origin main
-```
+## 🎯 使用說明 (Usage)
 
-### 2. 在 Vercel Dashboard 啟用 Upstash Redis
+### 存取方式
+系統採參數式驗證，請確保網址帶有正確的 `tid` 與 `uname`：
+`https://your-app.vercel.app/?tid=YOUR_ID&uname=YOUR_NAME`
 
-1. 前往 [Vercel Dashboard](https://vercel.com/dashboard)
-2. 選擇您的專案
-3. 點選 **Storage** 或 **Integrations**
-4. 搜尋並新增 **Upstash Redis**
-5. 點擊 **Create Database** 建立新的 Redis 資料庫
-6. 選擇區域（建議選擇離您使用者最近的地區）
-7. 環境變數會自動注入到專案中：
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
+### 操作捷徑
+- **新增**: 欄位底部「新增任務」。
+- **編輯**: 雙擊卡片。
+- **刪除**: 右鍵點擊卡片。
+- **查看歷史**: 點擊卡片右上角的時鐘圖示。
 
-### 3. 重新部署
+## 🗺️ 開發藍圖 (Roadmap)
 
-整合完成後，Vercel 會自動重新部署。
+- [x] **任務 CRUD 功能** (Completed)
+- [x] **優先級與標籤系統** (Completed)
+- [x] **操作歷史紀錄** (Completed)
+- [ ] **AI 智能任務拆解**：自動將 Backlog 拆解為具體步驟。
+- [ ] **AI 智能標籤建議**：根據描述內容自動推薦 Tag。
+- [ ] **音效回饋 (Haptic/Audio)**：增強拖拽的體感。
 
-## 🔧 API Endpoints
+## 👨‍💻 開發者 (Creator)
 
-詳細 API 文件請參閱 [API.md](./API.md)。
+**龍蝦幫幫主 (ungetLai)**  
+- GitHub: [ungetLai](https://github.com/ungetLai)
+- Telegram: [龍蝦幫](https://t.me/ungetLai)
 
-### GET /api/tasks
-取得所有任務 (支援過濾)
+## 📄 授權 (License)
 
-### POST /api/tasks
-新增任務
-
-### PUT /api/tasks
-更新任務
-
-### DELETE /api/tasks
-刪除任務
-
-## 📁 專案結構
-
-```
-project-kanban-app/
-├── api/
-│   └── tasks.js          # Serverless API (Upstash Redis)
-├── src/
-│   ├── App.jsx           # 主應用程式
-│   ├── App.css           # 樣式
-│   └── main.jsx          # Entry point
-├── public/
-├── vercel.json           # Vercel 配置
-├── .env.example          # 環境變數範例
-└── package.json
-```
-
-## 🎯 使用說明
-
-1. **新增任務**: 點擊欄位底部的「新增任務」按鈕
-2. **移動任務**: 拖曳任務卡片到目標欄位
-3. **自動儲存**: 所有變更會自動儲存到雲端
-4. **儲存狀態**: 右上角會顯示儲存狀態
-
-## 🔒 安全性
-
-- API 使用 Upstash Redis REST API
-- 環境變數由 Vercel 安全管理
-- CORS 已設定為允許所有來源（生產環境建議限制）
-
-## 📝 待開發功能
-
-- [ ] 任務編輯功能
-- [ ] 任務刪除功能
-- [ ] 任務優先級
-- [ ] 標籤系統
-- [ ] 多人協作
-- [ ] 任務搜尋/過濾
-- [ ] 匯出功能
-
-## 👨‍💻 開發者
-
-**零缺點 (ungetLai)**  
-GitHub: https://github.com/ungetLai
-
-## 📄 授權
-
-MIT License
+MIT License - 隨便拿去用，但記得註名出處，這是江湖道義。
 
 ---
 
-🦞 由龍蝦幫幫主協助開發
+*由龍蝦幫幫主 Nexora 協助校稿與資安加固。* 🦞
