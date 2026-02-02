@@ -17,7 +17,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
         content: initialData.content || '',
         desc: initialData.desc || '',
         priority: initialData.priority || '',
-        project: initialData.project || '',
+        project: initialData.projectName || initialData.project || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '',
         status: initialData.status || 'backlog'
       });
