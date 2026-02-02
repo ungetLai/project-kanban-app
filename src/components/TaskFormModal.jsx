@@ -6,7 +6,8 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
     content: '',
     desc: '',
     priority: '',
-    tags: ''
+    tags: '',
+    status: ''
   });
 
   useEffect(() => {
@@ -15,14 +16,16 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
         content: initialData.content || '',
         desc: initialData.desc || '',
         priority: initialData.priority || '',
-        tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : ''
+        tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '',
+        status: initialData.status || 'backlog'
       });
     } else if (isOpen) {
       setFormData({
         content: '',
         desc: '',
         priority: '',
-        tags: ''
+        tags: '',
+        status: ''
       });
     }
   }, [isOpen, initialData]);
@@ -92,6 +95,27 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
               <option value="P3">P3 (低 - Low)</option>
             </select>
           </div>
+
+          {mode === 'edit' && (
+            <div className="form-group">
+              <label htmlFor="status">狀態 (Status)</label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="form-select"
+              >
+                <option value="backlog">BackLog (待討論)</option>
+                <option value="todo">Todo (準備中)</option>
+                <option value="ongoing">OnGoing (執行階段)</option>
+                <option value="review">Review (任務驗收)</option>
+                <option value="pending">Pending (有待確認)</option>
+                <option value="done">Done (結案)</option>
+                <option value="archived">Archive (歷史區)</option>
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="tags">標籤 (以逗號分隔)</label>
