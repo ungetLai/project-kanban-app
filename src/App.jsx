@@ -19,7 +19,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive, User, Lock, Sun, Moon } from 'lucide-react';
+import { Plus, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive, User, Lock, Sun, Moon, XCircle } from 'lucide-react';
 import './App.css';
 import { ALLOWED_USERS } from './AllowedUsers';
 
@@ -37,6 +37,7 @@ const MAIN_COLUMNS = [
 
 const FLOATING_COLUMNS = [
   { id: 'pending', title: 'Pending (有待確認議題)', icon: Clock },
+  { id: 'failed', title: 'Failed (驗收失敗)', icon: XCircle },
   { id: 'done', title: 'Done (結案)', icon: CheckCircle },
   { id: 'archived', title: 'Archive (歷史區)', icon: Archive },
 ];
@@ -108,7 +109,7 @@ function FloatingDropZone({ id, icon: Icon, count, onClick }) {
   const { setNodeRef, isOver } = useDroppable({ id: `floating-${id}`, data: { status: id, type: 'floating' } });
   const style = { transform: isOver ? 'scale(1.2)' : 'scale(1)', backgroundColor: isOver ? '#ef4444' : undefined };
   return (
-    <button ref={setNodeRef} className={`floating-btn floating-btn-${id === 'pending' ? 'left' : id === 'done' ? 'right' : 'archive'}`} onClick={onClick} style={style} title={`查看 ${id}`}>
+    <button ref={setNodeRef} className={`floating-btn floating-btn-${id === 'pending' ? 'left' : id === 'failed' ? 'failed' : id === 'done' ? 'right' : 'archive'}`} onClick={onClick} style={style} title={`查看 ${id}`}>
       <Icon size={24} />
       {count > 0 && <span className="badge">{count}</span>}
     </button>
@@ -423,6 +424,7 @@ export default function App() {
         </div>
 
         <FloatingDropZone id="pending" icon={Clock} count={taskCounts['pending']} onClick={() => setOpenModal('pending')} />
+        <FloatingDropZone id="failed" icon={XCircle} count={taskCounts['failed']} onClick={() => setOpenModal('failed')} />
         <FloatingDropZone id="done" icon={CheckCircle} count={taskCounts['done']} onClick={() => setOpenModal('done')} />
         <FloatingDropZone id="archived" icon={Archive} count={taskCounts['archived']} onClick={() => setOpenModal('archived')} />
 
@@ -440,6 +442,7 @@ export default function App() {
               <div className="modal-header">
                 <h2>
                   {openModal === 'pending' && <Clock size={20} />}
+                  {openModal === 'failed' && <XCircle size={20} />}
                   {openModal === 'done' && <CheckCircle size={20} />}
                   {openModal === 'archived' && <Archive size={20} />}
                   {openModal === 'history' && <History size={20} />}

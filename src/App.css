@@ -219,6 +219,12 @@ body {
   background: #f59e0b; /* Pending 橘色 */
 }
 
+.floating-btn-failed {
+  left: 2rem;
+  bottom: 6rem; /* 在 Pending 按鈕上方 */
+  background: #ef4444; /* Failed 紅色 */
+}
+
 .floating-btn-right {
   right: 2rem;
   background: #10b981; /* Done 綠色 */
