@@ -61,6 +61,7 @@ function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
     >
       <div className="task-header">
         <div className="task-title">
+          {task.projectName && <span className="project-badge">{task.projectName}</span>}
           {task.priority && <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>}
           {task.content}
         </div>
