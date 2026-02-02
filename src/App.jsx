@@ -4,7 +4,8 @@ import {
   DragOverlay,
   closestCorners,
   KeyboardSensor,
-  PointerSensor,
+  TouchSensor,
+  MouseSensor,
   useSensor,
   useSensors,
   defaultDropAnimationSideEffects,
@@ -159,7 +160,8 @@ export default function App() {
   }, [darkMode]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -284,6 +286,7 @@ export default function App() {
       const isChanged = formData.content !== task.content || 
                         formData.desc !== task.desc || 
                         formData.priority !== task.priority || 
+                        formData.status !== task.status ||
                         JSON.stringify(formData.tags) !== JSON.stringify(task.tags || []);
       
       if (!isChanged) return;
@@ -295,6 +298,7 @@ export default function App() {
         desc: formData.desc, 
         priority: formData.priority, 
         tags: formData.tags, 
+        status: formData.status,
         updatedAt: Date.now(), 
         updatedBy: currentUser, 
         history 
