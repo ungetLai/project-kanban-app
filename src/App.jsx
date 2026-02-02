@@ -99,7 +99,9 @@ function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask, onViewH
             <TaskCard key={task.id} task={task} onEdit={onEditTask} onDelete={onDeleteTask} onViewHistory={onViewHistory} />
           ))}
         </SortableContext>
-        <button className="add-task-btn" onClick={() => onAddTask(id)}><Plus size={16} /> 新增任務</button>
+        {['backlog', 'todo'].includes(id) && (
+          <button className="add-task-btn" onClick={() => onAddTask(id)}><Plus size={16} /> 新增任務</button>
+        )}
       </div>
     </div>
   );
@@ -468,7 +470,7 @@ export default function App() {
                     {getTasksByStatus(openModal).map((task) => (
                       <TaskCard key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} onViewHistory={(t) => { setSelectedTask(t); setOpenModal('history'); }} />
                     ))}
-                    {openModal !== 'archived' && <button className="add-task-btn" onClick={() => handleAddTask(openModal)}><Plus size={16} /> 新增</button>}
+                    {/* Floating columns (pending, failed, done, archived) do not allow adding new tasks directly */}
                   </SortableContext>
                 )}
               </div>
