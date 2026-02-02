@@ -1,4 +1,5 @@
 export const ALLOWED_USERS = [
-  { id: '8491288413', username: 'ungetLai' }, // 賴大叔
-  // 可以在這裡添加更多允許的用戶
+  // 這裡放置允許進入看板的 Telegram 使用者資訊
+  // 格式: { id: 'TG_ID', username: 'TG_USERNAME' }
+  { id: '8491288413', username: 'ungetLai' }, 
 ];

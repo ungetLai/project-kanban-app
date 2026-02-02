@@ -17,7 +17,8 @@ If you are a bot, use the **專屬密令 (Secret Command)** rule:
 - `uname`: Bot's Username
 - `bot`: Must be `True`
 - `rule`: A generated string based on the following formula:
-  `rule = username + id + reverse(id) + prefix4(username)`
+  `rule = username + id + reverse(id) + prefix4(username) + AUTH_SALT`
+  *Note: `AUTH_SALT` is an optional server-side environment variable.*
 
 **Example for Bot:**
 - `uname`: `nexora_z_bot`
