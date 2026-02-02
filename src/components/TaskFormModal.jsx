@@ -6,6 +6,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
     content: '',
     desc: '',
     priority: '',
+    project: '',
     tags: '',
     status: ''
   });
@@ -16,6 +17,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
         content: initialData.content || '',
         desc: initialData.desc || '',
         priority: initialData.priority || '',
+        project: initialData.project || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '',
         status: initialData.status || 'backlog'
       });
@@ -24,6 +26,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
         content: '',
         desc: '',
         priority: '',
+        project: '',
         tags: '',
         status: ''
       });
@@ -96,6 +99,19 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
             </select>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="project">專案名稱</label>
+            <input
+              type="text"
+              id="project"
+              name="project"
+              value={formData.project}
+              onChange={handleChange}
+              placeholder="例如：Kanban App"
+              className="form-input"
+            />
+          </div>
+
           {mode === 'edit' && (
             <div className="form-group">
               <label htmlFor="status">狀態 (Status)</label>
@@ -142,6 +158,33 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
               className="form-textarea"
             />
           </div>
+
+          {mode === 'edit' && initialData?.history && initialData.history.length > 0 && (
+            <div className="history-section">
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>操作歷史</h3>
+              <div className="history-timeline">
+                {initialData.history.sort((a, b) => b.timestamp - a.timestamp).map((record, index) => (
+                  <div key={index} className="history-item">
+                    <div className="history-timestamp">
+                      {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
+                    </div>
+                    <div className="history-content">
+                      <div className="history-field">{record.field}</div>
+                      <div className="history-change">
+                        {record.oldValue && (
+                          <>
+                            <span className="old-value">{String(record.oldValue)}</span>
+                            <span className="arrow">→</span>
+                          </>
+                        )}
+                        <span className="new-value">{String(record.newValue)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>取消</button>
