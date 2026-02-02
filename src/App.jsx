@@ -257,6 +257,7 @@ export default function App() {
         content: formData.content,
         desc: formData.desc || '',
         priority: formData.priority || '',
+        projectName: formData.project || '',
         tags: formData.tags || [],
         status: normalizedStatus,
         createdAt: now,
@@ -287,6 +288,7 @@ export default function App() {
       const isChanged = formData.content !== task.content || 
                         formData.desc !== task.desc || 
                         formData.priority !== task.priority || 
+                        formData.project !== (task.projectName || '') ||
                         formData.status !== task.status ||
                         JSON.stringify(formData.tags) !== JSON.stringify(task.tags || []);
       
@@ -298,6 +300,7 @@ export default function App() {
         content: formData.content, 
         desc: formData.desc, 
         priority: formData.priority, 
+        projectName: formData.project,
         tags: formData.tags, 
         status: formData.status,
         updatedAt: Date.now(), 
