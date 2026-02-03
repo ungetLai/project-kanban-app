@@ -165,21 +165,58 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
               <div className="history-timeline">
                 {initialData.history.sort((a, b) => b.timestamp - a.timestamp).map((record, index) => (
                   <div key={index} className="history-item">
-                    <div className="history-timestamp">
-                      {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
-                    </div>
-                    <div className="history-content">
-                      <div className="history-field">{record.field}</div>
-                      <div className="history-change">
-                        {record.oldValue && (
-                          <>
-                            <span className="old-value">{String(record.oldValue)}</span>
-                            <span className="arrow">→</span>
-                          </>
-                        )}
-                        <span className="new-value">{String(record.newValue)}</span>
+                    {record.snapshot ? (
+                      <div className="history-rich-content">
+                        <div className="history-header">
+                          <span className="history-time">
+                            {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
+                          </span>
+                          <span className="history-type">
+                            ({record.type || 'modify'})
+                          </span>
+                          <span className="history-user">
+                            {record.operator || record.updatedBy || 'Unknown'}
+                          </span>
+                          {record.field === 'status' ? (
+                            <>
+                              <span className="arrow">→</span>
+                              <span className="old-status">{record.oldValue || 'backlog'}</span>
+                              <span className="arrow">→</span>
+                              <span className="new-status">{record.newValue}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="arrow">→</span>
+                              <span>{record.newValue}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="history-snapshot">
+                          <div className="snapshot-row"><strong>任務主題 :</strong> {record.snapshot.content}</div>
+                          <div className="snapshot-row"><strong>任務內容 :</strong> {record.snapshot.desc || '(無)'}</div>
+                          <div className="snapshot-row"><strong>優先級 :</strong> {record.snapshot.priority || '(無)'}</div>
+                          <div className="snapshot-row"><strong>專案名稱 :</strong> {record.snapshot.projectName || '(無)'}</div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="history-timestamp">
+                          {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
+                        </div>
+                        <div className="history-content">
+                          <div className="history-field">{record.field}</div>
+                          <div className="history-change">
+                            {record.oldValue && (
+                              <>
+                                <span className="old-value">{String(record.oldValue)}</span>
+                                <span className="arrow">→</span>
+                              </>
+                            )}
+                            <span className="new-value">{String(record.newValue)}</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

@@ -267,7 +267,20 @@ export default function App() {
         updatedAt: now,
         createdBy: currentUser,
         updatedBy: currentUser,
-        history: [{ timestamp: now, field: 'created', oldValue: null, newValue: `建立於 ${normalizedStatus} by ${currentUser}` }]
+        history: [{ 
+          timestamp: now, 
+          type: 'created', 
+          field: 'created', 
+          operator: currentUser,
+          oldValue: null, 
+          newValue: `建立於 ${normalizedStatus}`,
+          snapshot: {
+            content: formData.content,
+            desc: formData.desc,
+            priority: formData.priority,
+            projectName: formData.project
+          }
+        }]
       };
       setTasks(prev => [...prev, newTask]);
       try {
@@ -297,7 +310,49 @@ export default function App() {
       
       if (!isChanged) return;
 
-      const history = [{ timestamp: Date.now(), field: 'edit', oldValue: 'details', newValue: 'updated', operator: currentUser }, ...(task.history || [])].slice(0, 50);
+      const newHistory = [];
+      const now = Date.now();
+      
+      // Status Change
+      if (formData.status !== task.status) {
+         newHistory.push({
+            timestamp: now,
+            type: 'modify',
+            field: 'status',
+            operator: currentUser,
+            oldValue: task.status,
+            newValue: formData.status,
+            snapshot: {
+              content: formData.content,
+              desc: formData.desc,
+              priority: formData.priority,
+              projectName: formData.project
+            }
+         });
+      }
+      
+      // Other Details Change
+      if (formData.content !== task.content || formData.desc !== task.desc || formData.priority !== task.priority || formData.project !== (task.projectName || '') || JSON.stringify(formData.tags) !== JSON.stringify(task.tags || [])) {
+         // Avoid duplicate if only status changed
+         if (newHistory.length === 0 || (formData.content !== task.content || formData.desc !== task.desc)) {
+            newHistory.push({
+                timestamp: now,
+                type: 'modify',
+                field: 'details',
+                operator: currentUser,
+                oldValue: 'details',
+                newValue: 'updated',
+                snapshot: {
+                  content: formData.content,
+                  desc: formData.desc,
+                  priority: formData.priority,
+                  projectName: formData.project
+                }
+            });
+         }
+      }
+
+      const history = [...newHistory, ...(task.history || [])].slice(0, 50);
       updateTask({ 
         ...task, 
         content: formData.content, 
@@ -376,7 +431,23 @@ export default function App() {
     const activeTask = tasks.find(t => t.id === active.id);
     if (!activeTask) return;
     if ((activeTask.status || '').toLowerCase().trim() !== targetStatus) {
-      updateTask({ ...activeTask, status: targetStatus, updatedAt: Date.now(), updatedBy: currentUser });
+      const oldStatus = (activeTask.status || '').toLowerCase().trim();
+      const historyRecord = {
+        timestamp: Date.now(),
+        type: 'modify',
+        field: 'status',
+        operator: currentUser,
+        oldValue: oldStatus,
+        newValue: targetStatus,
+        snapshot: {
+          content: activeTask.content,
+          desc: activeTask.desc,
+          priority: activeTask.priority,
+          projectName: activeTask.projectName
+        }
+      };
+      const newHistory = [historyRecord, ...(activeTask.history || [])].slice(0, 50);
+      updateTask({ ...activeTask, status: targetStatus, updatedAt: Date.now(), updatedBy: currentUser, history: newHistory });
     } else if (active.id !== over.id && !over.id.startsWith('floating-')) {
       const oldIndex = tasks.findIndex(t => t.id === active.id);
       const newIndex = tasks.findIndex(t => t.id === over.id);
