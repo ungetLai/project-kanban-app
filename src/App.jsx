@@ -19,9 +19,32 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Save, Pencil, Trash2, Clock, CheckCircle, X, History, Archive, User, Lock, Sun, Moon, XCircle } from 'lucide-react';
+import { 
+  Trello, 
+  Calendar, 
+  Moon, 
+  Sun, 
+  Inbox, 
+  CircleDashed, 
+  Loader, 
+  Eye, 
+  CircleCheck, 
+  Hourglass, 
+  XCircle, 
+  Archive, 
+  Plus, 
+  Pencil, 
+  History, 
+  Trash2, 
+  X, 
+  LockOpen, 
+  ArrowLeft,
+  CircleAlert
+} from 'lucide-react';
 import './App.css';
 import { ALLOWED_USERS } from './AllowedUsers';
+import TaskFormModal from './components/TaskFormModal';
+import './components/TaskFormModal.css';
 
 // Constants
 const API_URL = '/api/tasks';
@@ -29,26 +52,88 @@ const REFRESH_INTERVAL = 30000;
 
 // Columns
 const MAIN_COLUMNS = [
-  { id: 'backlog', title: 'BackLog (待討論)' },
-  { id: 'todo', title: 'Todo (準備中)' },
-  { id: 'ongoing', title: 'onGoing (執行階段)' },
-  { id: 'review', title: 'Review (任務驗收)' },
+  { id: 'backlog', title: 'BackLog (待討論)', icon: <Inbox size={20} color="#6B7280" /> },
+  { id: 'todo', title: 'Todo (準備中)', icon: <CircleDashed size={20} color="#3B82F6" /> },
+  { id: 'ongoing', title: 'onGoing (執行階段)', icon: <Loader size={20} color="#F59E0B" /> },
+  { id: 'review', title: 'Review (任務驗收)', icon: <Eye size={20} color="#8B5CF6" /> },
 ];
 
-const FLOATING_COLUMNS = [
-  { id: 'pending', title: 'Pending (有待確認議題)', icon: Clock },
-  { id: 'failed', title: 'Failed (驗收失敗)', icon: XCircle },
-  { id: 'done', title: 'Done (結案)', icon: CheckCircle },
-  { id: 'archived', title: 'Archive (歷史區)', icon: Archive },
+const STATUS_BAR_ITEMS = [
+  { id: 'done', label: 'Done 完成', icon: <CircleCheck size={18} color="var(--accent-success)" />, colorClass: 'success' },
+  { id: 'pending', label: 'Pending 待處理', icon: <Hourglass size={18} color="var(--accent-warning)" />, colorClass: 'warning' },
+  { id: 'failed', label: 'Failed 驗收失敗', icon: <XCircle size={18} color="var(--accent-danger)" />, colorClass: 'danger' },
+  { id: 'archived', label: 'Archive 封存', icon: <Archive size={18} color="#6B7280" />, colorClass: 'tertiary' },
 ];
 
-const ALL_COLUMNS = [...MAIN_COLUMNS, ...FLOATING_COLUMNS];
+const ALL_COLUMNS = [...MAIN_COLUMNS, ...STATUS_BAR_ITEMS];
 
 // --- Components ---
 
-function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id, data: { task } });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+function Header({ theme, onToggleTheme, currentUser, saving, lastSaved, autoRefreshTime }) {
+  return (
+    <header className="header">
+      <div className="header-left">
+        <Trello className="logo-icon" size={32} />
+        <h1 className="logo-text">專案看板</h1>
+      </div>
+      <div className="header-right">
+        <div className="time-info">
+          <Calendar size={16} />
+          <span>{new Date().toLocaleTimeString('zh-TW')}</span>
+        </div>
+        <div className="save-indicator" style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+          {saving ? <span>💾...</span> : lastSaved ? <span>✅ {lastSaved.toLocaleTimeString()}</span> : null}
+        </div>
+        <button className="theme-toggle" onClick={onToggleTheme}>
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
+        <div className="user-avatar" title={currentUser}>
+          <span>{currentUser ? currentUser.charAt(0).toUpperCase() : 'U'}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function StatusButton({ id, icon, label, count, colorClass, onClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `floating-${id}`, data: { status: id, type: 'floating' } });
+  const style = { 
+    transform: isOver ? 'scale(1.05)' : 'scale(1)', 
+    borderColor: isOver ? 'var(--accent-primary)' : 'var(--border)',
+    backgroundColor: isOver ? 'var(--bg-glass)' : 'var(--bg-secondary)'
+  };
+  
+  return (
+    <button ref={setNodeRef} className="status-button" onClick={onClick} style={style}>
+      {icon}
+      <span className="status-label">{label}</span>
+      <div className={`status-badge ${colorClass}`}>
+        <span>{count}</span>
+      </div>
+    </button>
+  );
+}
+
+function TaskCard({ task, onEdit, onDelete, onViewHistory, isOverlay = false }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: task.id, 
+    data: { task },
+    disabled: isOverlay
+  });
+  
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition, 
+    opacity: isDragging ? 0.5 : 1,
+    borderLeft: isOverlay ? 'none' : `4px solid var(--priority-${task.priority?.toLowerCase() || 'p3'})`
+  };
+
+  const priorityColors = {
+    P0: 'var(--priority-p0)',
+    P1: 'var(--priority-p1)',
+    P2: 'var(--priority-p2)',
+    P3: 'var(--priority-p3)',
+  };
 
   return (
     <div 
@@ -60,38 +145,59 @@ function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
       onDoubleClick={(e) => { e.stopPropagation(); onEdit(task.id); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(task.id); }}
     >
-      <div className="task-header">
-        <div className="task-title">
-          {task.projectName && <span className="project-badge">{task.projectName}</span>}
-          {task.priority && <span className={`priority-badge priority-${task.priority}`}>{task.priority}</span>}
-          {task.content}
+      <div className="card-header">
+        <div 
+          className="priority-badge" 
+          style={{ backgroundColor: priorityColors[task.priority] || 'var(--text-tertiary)' }}
+        >
+          <CircleAlert size={12} color="#FFFFFF" />
+          <span>{task.priority || 'P3'}</span>
         </div>
-        <div className="task-actions" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-          <button className="task-action-btn" onClick={() => onViewHistory(task)} title="查看歷史"><History size={14} /></button>
-          <button className="task-action-btn" onClick={() => onEdit(task.id)} title="編輯"><Pencil size={14} /></button>
-          <button className="task-action-btn delete" onClick={() => onDelete(task.id)} title="封存"><Trash2 size={14} /></button>
-        </div>
+        {task.projectName && (
+          <div className="project-tag">
+            <span>{task.projectName}</span>
+          </div>
+        )}
       </div>
-      {task.desc && <div className="task-desc">{task.desc}</div>}
-      {task.tags && Array.isArray(task.tags) && task.tags.length > 0 && (
-        <div className="task-tags">
-          {task.tags.map((tag, i) => <span key={i} className="task-tag">{tag}</span>)}
+      <h3 className="card-title">{task.content}</h3>
+      {task.desc && <p className="card-desc">{task.desc}</p>}
+      <div className="card-footer">
+        <div className="tags-container">
+          {(task.tags || []).map((tag, index) => (
+            <div key={index} className="tag" style={{ backgroundColor: index === 0 ? 'var(--accent-primary)' : '#6B7280' }}>
+              <span>{tag}</span>
+            </div>
+          ))}
         </div>
-      )}
-      <div className="task-footer" style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-        {task.updatedBy && <span>By {task.updatedBy}</span>}
+        <div className="action-buttons" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <button className="icon-btn" onClick={() => onViewHistory(task)} title="查看歷史"><History size={14} /></button>
+          <button className="icon-btn" onClick={() => onEdit(task.id)} title="編輯"><Pencil size={14} /></button>
+          <button className="icon-btn delete" onClick={() => onDelete(task.id)} title="封存"><Trash2 size={14} /></button>
+        </div>
       </div>
     </div>
   );
 }
 
-function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask, onViewHistory }) {
+function Column({ id, title, icon, tasks, onAddTask, onEditTask, onDeleteTask, onViewHistory }) {
   const { setNodeRef } = useSortable({ id, data: { type: 'column', id } });
   return (
     <div className="kanban-column">
       <div className="column-header">
-        <span>{title}</span>
-        <span className="column-count">{tasks.length}</span>
+        <div className="header-left-group">
+          <div className="column-icon-wrapper">
+            {icon}
+            <h2 className="column-title">{title}</h2>
+          </div>
+          <div className="column-count">
+            <span>{tasks.length}</span>
+          </div>
+        </div>
+        {['backlog', 'todo'].includes(id) && (
+          <button className="add-button" onClick={() => onAddTask(id)}>
+            <Plus size={16} />
+          </button>
+        )}
       </div>
       <div ref={setNodeRef} className="task-list">
         <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
@@ -99,22 +205,8 @@ function Column({ id, title, tasks, onAddTask, onEditTask, onDeleteTask, onViewH
             <TaskCard key={task.id} task={task} onEdit={onEditTask} onDelete={onDeleteTask} onViewHistory={onViewHistory} />
           ))}
         </SortableContext>
-        {['backlog', 'todo'].includes(id) && (
-          <button className="add-task-btn" onClick={() => onAddTask(id)}><Plus size={16} /> 新增任務</button>
-        )}
       </div>
     </div>
-  );
-}
-
-function FloatingDropZone({ id, icon: Icon, count, onClick }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `floating-${id}`, data: { status: id, type: 'floating' } });
-  const style = { transform: isOver ? 'scale(1.2)' : 'scale(1)', backgroundColor: isOver ? '#ef4444' : undefined };
-  return (
-    <button ref={setNodeRef} className={`floating-btn floating-btn-${id === 'pending' ? 'left' : id === 'failed' ? 'failed' : id === 'done' ? 'right' : 'archive'}`} onClick={onClick} style={style} title={`查看 ${id}`}>
-      <Icon size={24} />
-      {count > 0 && <span className="badge">{count}</span>}
-    </button>
   );
 }
 
@@ -122,23 +214,32 @@ function Unauthorized() {
   return (
     <div className="unauthorized-container">
       <div className="unauthorized-card">
-        <div className="error-status"><Lock size={48} color="#ef4444" /><h1>401 Unauthorized</h1></div>
-        <div className="recruit-banner">
-          <h2>🦞 龍蝦幫招募令 🦞</h2>
-          <div className="recruit-content">
-            <p>看來你還沒拿到入幫許可證，或者身分驗證失敗了！</p>
-            <p>我們在尋找志同道合的夥伴，一同在開發的江湖中闖蕩。</p>
-            <p>如果你有熱忱、有義氣，歡迎聯絡幫主申請入幫！</p>
-          </div>
-          <div className="contact-info">聯絡人：<a href="https://t.me/ungetLai" target="_blank" rel="noopener noreferrer">龍蝦幫幫主</a></div>
+        <LockOpen size={64} className="error-icon" />
+        <h1 className="error-title">401 Unauthorized</h1>
+        <div className="divider"></div>
+        <div className="recruit-header">
+          <span className="lobster">🦞</span>
+          <h2 className="recruit-title">龍蝦幫招募令</h2>
+          <span className="lobster">🦞</span>
         </div>
+        <div className="desc-container">
+          <p className="desc-text">看來你還沒拿到入幫許可證，或者身分驗證失敗了！</p>
+          <p className="desc-text">我們在尋找志同道合的夥伴，一同在開發的江湖中闖蕩。</p>
+          <p className="desc-text">如果你有熱忱、有義氣，歡迎聯絡幫主申請入幫！</p>
+        </div>
+        <div className="divider"></div>
+        <div className="contact-info">
+          <span className="contact-label">聯絡人：</span>
+          <span className="contact-name">龍蝦幫幫主</span>
+        </div>
+        <button className="back-button" onClick={() => window.location.href = 'https://t.me/ungetLai'}>
+          <ArrowLeft size={18} />
+          <span>前往聯絡幫主</span>
+        </button>
       </div>
     </div>
   );
 }
-
-import TaskFormModal from './components/TaskFormModal';
-import './components/TaskFormModal.css';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -147,21 +248,21 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [openModal, setOpenModal] = useState(null); 
-  const [formMode, setFormMode] = useState('create'); // 'create' or 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [targetColumn, setTargetColumn] = useState('backlog');
   const [selectedTask, setSelectedTask] = useState(null);
   const [currentUser, setCurrentUser] = useState('');
   const [autoRefreshTime, setAutoRefreshTime] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
-    if (darkMode) {
+    if (theme === 'dark') {
       document.body.classList.add('dark');
     } else {
       document.body.classList.remove('dark');
     }
-  }, [darkMode]);
+  }, [theme]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -192,7 +293,6 @@ export default function App() {
       if (Array.isArray(data)) {
         setTasks(data);
         setAutoRefreshTime(new Date());
-        console.log('[Debug] Tasks Loaded:', data);
       }
     } catch (error) {
       console.error('Load Error:', error);
@@ -244,7 +344,7 @@ export default function App() {
     }
   };
 
-  const handleAddTask = async (status) => {
+  const handleAddTask = (status) => {
     setTargetColumn(status);
     setFormMode('create');
     setSelectedTask(null);
@@ -300,7 +400,6 @@ export default function App() {
       }
     } else if (formMode === 'edit' && selectedTask) {
       const task = selectedTask;
-      // Check changes
       const isChanged = formData.content !== task.content || 
                         formData.desc !== task.desc || 
                         formData.priority !== task.priority || 
@@ -309,61 +408,25 @@ export default function App() {
                         JSON.stringify(formData.tags) !== JSON.stringify(task.tags || []);
       
       if (!isChanged) return;
-
       const newHistory = [];
       const now = Date.now();
-      
-      // Status Change
       if (formData.status !== task.status) {
          newHistory.push({
-            timestamp: now,
-            type: 'modify',
-            field: 'status',
-            operator: currentUser,
-            oldValue: task.status,
-            newValue: formData.status,
-            snapshot: {
-              content: formData.content,
-              desc: formData.desc,
-              priority: formData.priority,
-              projectName: formData.project
-            }
+            timestamp: now, type: 'modify', field: 'status', operator: currentUser,
+            oldValue: task.status, newValue: formData.status, snapshot: { ...formData, projectName: formData.project }
          });
       }
-      
-      // Other Details Change
       if (formData.content !== task.content || formData.desc !== task.desc || formData.priority !== task.priority || formData.project !== (task.projectName || '') || JSON.stringify(formData.tags) !== JSON.stringify(task.tags || [])) {
-         // Avoid duplicate if only status changed
          if (newHistory.length === 0 || (formData.content !== task.content || formData.desc !== task.desc)) {
             newHistory.push({
-                timestamp: now,
-                type: 'modify',
-                field: 'details',
-                operator: currentUser,
-                oldValue: 'details',
-                newValue: 'updated',
-                snapshot: {
-                  content: formData.content,
-                  desc: formData.desc,
-                  priority: formData.priority,
-                  projectName: formData.project
-                }
+                timestamp: now, type: 'modify', field: 'details', operator: currentUser,
+                oldValue: 'details', newValue: 'updated', snapshot: { ...formData, projectName: formData.project }
             });
          }
       }
-
       const history = [...newHistory, ...(task.history || [])].slice(0, 50);
       updateTask({ 
-        ...task, 
-        content: formData.content, 
-        desc: formData.desc, 
-        priority: formData.priority, 
-        projectName: formData.project,
-        tags: formData.tags, 
-        status: formData.status,
-        updatedAt: Date.now(), 
-        updatedBy: currentUser, 
-        history 
+        ...task, ...formData, projectName: formData.project, updatedAt: now, updatedBy: currentUser, history 
       });
     }
   };
@@ -380,36 +443,19 @@ export default function App() {
     if (!confirm('確定要封存此任務嗎？')) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-
     const now = Date.now();
     const historyRecord = {
-      timestamp: now,
-      type: 'modify',
-      field: 'status',
-      operator: currentUser,
-      oldValue: task.status,
-      newValue: 'archived',
-      snapshot: { ...task }
+      timestamp: now, type: 'modify', field: 'status', operator: currentUser,
+      oldValue: task.status, newValue: 'archived', snapshot: { ...task }
     };
     const newHistory = [historyRecord, ...(task.history || [])].slice(0, 50);
-
-    const updatedTask = { 
-      ...task, 
-      status: 'archived', 
-      updatedAt: now, 
-      updatedBy: currentUser, 
-      history: newHistory 
-    };
-
+    const updatedTask = { ...task, status: 'archived', updatedAt: now, updatedBy: currentUser, history: newHistory };
     setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
-    
     try {
       setSaving(true);
       const params = new URLSearchParams(window.location.search);
       await fetch(`${API_URL}?id=${taskId}&tid=${params.get('tid')}&uname=${params.get('uname')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedTask)
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTask)
       });
       setLastSaved(new Date());
     } catch (err) {
@@ -420,35 +466,16 @@ export default function App() {
     }
   };
 
-  // --- DND ---
   const onDragEnd = (event) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over) return;
 
-    // Haptic & Audio Feedback
-    if (navigator.vibrate) navigator.vibrate(50);
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(400, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
-      }
-    } catch (e) { /* ignore */ }
-
     let targetStatus = null;
     if (over.id.startsWith('floating-')) {
       targetStatus = (over.data.current.status || '').toLowerCase().trim();
     } else {
-      const overColumn = ALL_COLUMNS.find(c => c.id === over.id);
+      const overColumn = MAIN_COLUMNS.find(c => c.id === over.id);
       if (overColumn) targetStatus = overColumn.id;
       else {
         const overTask = tasks.find(t => t.id === over.id);
@@ -461,18 +488,8 @@ export default function App() {
     if ((activeTask.status || '').toLowerCase().trim() !== targetStatus) {
       const oldStatus = (activeTask.status || '').toLowerCase().trim();
       const historyRecord = {
-        timestamp: Date.now(),
-        type: 'modify',
-        field: 'status',
-        operator: currentUser,
-        oldValue: oldStatus,
-        newValue: targetStatus,
-        snapshot: {
-          content: activeTask.content,
-          desc: activeTask.desc,
-          priority: activeTask.priority,
-          projectName: activeTask.projectName
-        }
+        timestamp: Date.now(), type: 'modify', field: 'status', operator: currentUser,
+        oldValue: oldStatus, newValue: targetStatus, snapshot: { ...activeTask }
       };
       const newHistory = [historyRecord, ...(activeTask.history || [])].slice(0, 50);
       updateTask({ ...activeTask, status: targetStatus, updatedAt: Date.now(), updatedBy: currentUser, history: newHistory });
@@ -483,103 +500,96 @@ export default function App() {
     }
   };
 
-  // --- Filter Helpers ---
   const getTasksByStatus = useCallback((statusId) => {
-    const filtered = tasks.filter(t => (t.status || '').toLowerCase().trim() === statusId.toLowerCase().trim());
-    return filtered;
+    return tasks.filter(t => (t.status || '').toLowerCase().trim() === statusId.toLowerCase().trim());
   }, [tasks]);
 
   const taskCounts = useMemo(() => {
     const counts = {};
-    ALL_COLUMNS.forEach(col => {
-      counts[col.id] = getTasksByStatus(col.id).length;
-    });
-    console.log('[Debug] Task Counts:', counts);
+    ALL_COLUMNS.forEach(col => { counts[col.id] = getTasksByStatus(col.id).length; });
     return counts;
   }, [getTasksByStatus]);
 
-  if (loading) return <div className="kanban-container"><div style={{ textAlign: 'center', padding: '2rem' }}>載入中... 🦞</div></div>;
+  if (loading) return <div className="kanban-container"><div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-primary)' }}>載入中... 🦞</div></div>;
   if (isAuthorized === false) return <Unauthorized />;
 
   return (
     <div className="kanban-container">
-      <header className="kanban-header">
-        <h1>🦞 專案看板</h1>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="dark-toggle" onClick={() => setDarkMode(!darkMode)} title="切換主題">
-            {darkMode ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-          <div className="current-user" style={{ fontSize: '0.9rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>👤 {currentUser}</div>
-          <div className="save-indicator">
-            {saving ? <span>💾...</span> : lastSaved ? <span>✅ {lastSaved.toLocaleTimeString()}</span> : null}
-            {autoRefreshTime && <span title="上次自動重整">🔄 {autoRefreshTime.toLocaleTimeString()}</span>}
-          </div>
-        </div>
-      </header>
+      <Header theme={theme} onToggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')} currentUser={currentUser} saving={saving} lastSaved={lastSaved} autoRefreshTime={autoRefreshTime} />
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveId(e.active.id)} onDragEnd={onDragEnd}>
-        <div className="kanban-board">
-          {MAIN_COLUMNS.map((col) => (
-            <Column key={col.id} id={col.id} title={col.title} tasks={getTasksByStatus(col.id)} onAddTask={handleAddTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} onViewHistory={(t) => { setSelectedTask(t); setOpenModal('history'); }} />
+        <div className="status-bar">
+          {STATUS_BAR_ITEMS.map(item => (
+            <StatusButton key={item.id} id={item.id} icon={item.icon} label={item.label} count={taskCounts[item.id]} colorClass={item.colorClass} onClick={() => setOpenModal(item.id)} />
           ))}
         </div>
 
-        <FloatingDropZone id="pending" icon={Clock} count={taskCounts['pending']} onClick={() => setOpenModal('pending')} />
-        <FloatingDropZone id="failed" icon={XCircle} count={taskCounts['failed']} onClick={() => setOpenModal('failed')} />
-        <FloatingDropZone id="done" icon={CheckCircle} count={taskCounts['done']} onClick={() => setOpenModal('done')} />
-        <FloatingDropZone id="archived" icon={Archive} count={taskCounts['archived']} onClick={() => setOpenModal('archived')} />
+        <main className="board-container">
+          {MAIN_COLUMNS.map((col) => (
+            <Column key={col.id} id={col.id} title={col.title} icon={col.icon} tasks={getTasksByStatus(col.id)} onAddTask={handleAddTask} onEditTask={handleEditTask} onDeleteTask={handleDeleteTask} onViewHistory={(t) => { setSelectedTask(t); setOpenModal('history'); }} />
+          ))}
+        </main>
 
-        <TaskFormModal 
-          isOpen={openModal === 'form'} 
-          onClose={() => setOpenModal(null)} 
-          onSubmit={onFormSubmit}
-          initialData={selectedTask}
-          mode={formMode}
-        />
+        <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.5' } } }) }}>
+          {activeId && tasks.find(t => t.id === activeId) ? (
+             <TaskCard task={tasks.find(t => t.id === activeId)} isOverlay />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
-        {openModal && openModal !== 'form' && (
-          <div className="modal-overlay" onClick={() => setOpenModal(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>
-                  {openModal === 'pending' && <Clock size={20} />}
-                  {openModal === 'failed' && <XCircle size={20} />}
-                  {openModal === 'done' && <CheckCircle size={20} />}
-                  {openModal === 'archived' && <Archive size={20} />}
-                  {openModal === 'history' && <History size={20} />}
-                  <span style={{marginLeft: 8}}>{ALL_COLUMNS.find(c => c.id === openModal)?.title || '任務歷史'}</span>
-                </h2>
-                <button className="modal-close" onClick={() => setOpenModal(null)}><X size={20} /></button>
+      <TaskFormModal isOpen={openModal === 'form'} onClose={() => setOpenModal(null)} onSubmit={onFormSubmit} initialData={selectedTask} mode={formMode} />
+
+      {openModal && !['form', 'history'].includes(openModal) && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                {STATUS_BAR_ITEMS.find(i => i.id === openModal)?.icon}
+                <h2 className="column-title" style={{fontSize: '22px'}}>{STATUS_BAR_ITEMS.find(i => i.id === openModal)?.label}</h2>
+                <div className="modal-count-badge">{taskCounts[openModal]} 個任務</div>
               </div>
-              <div className="modal-body">
-                {openModal === 'history' && selectedTask ? (
-                  <div className="history-timeline">
-                    {(selectedTask.history || []).map((r, i) => (
-                      <div key={i} className="history-item">
-                        <div className="history-timestamp">{new Date(r.timestamp).toLocaleString('zh-TW')}</div>
-                        <div className="history-content">
-                          <div className="history-field">{r.field} {r.operator ? `by ${r.operator}` : ''}</div>
-                          <div className="history-change"><span className="old-value">{r.oldValue}</span> → <span className="new-value">{r.newValue}</span></div>
-                        </div>
+              <button className="modal-close" onClick={() => setOpenModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <SortableContext items={getTasksByStatus(openModal).map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {getTasksByStatus(openModal).map((task) => (
+                  <TaskCard key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} onViewHistory={(t) => { setSelectedTask(t); setOpenModal('history'); }} />
+                ))}
+              </SortableContext>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openModal === 'history' && selectedTask && (
+        <div className="modal-overlay" onClick={() => setOpenModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <History size={24} color="var(--accent-primary)" />
+                <h2 className="column-title" style={{fontSize: '22px'}}>任務歷史回溯</h2>
+              </div>
+              <button className="modal-close" onClick={() => setOpenModal(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+               <div className="history-timeline">
+                {(selectedTask.history || []).map((r, i) => (
+                  <div key={i} className="history-item">
+                    <div className="history-timestamp">{new Date(r.timestamp).toLocaleString('zh-TW')}</div>
+                    <div className="history-content">
+                      <div className="history-field">{r.field} {r.operator ? `by ${r.operator}` : ''}</div>
+                      <div className="history-change">
+                        {r.oldValue && <><span className="old-value">{r.oldValue}</span> <ArrowLeft size={14} style={{transform: 'rotate(180deg)'}} /></>}
+                        <span className="new-value">{r.newValue}</span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                ) : (
-                  <SortableContext items={getTasksByStatus(openModal).map(t => t.id)} strategy={verticalListSortingStrategy}>
-                    {getTasksByStatus(openModal).map((task) => (
-                      <TaskCard key={task.id} task={task} onEdit={handleEditTask} onDelete={handleDeleteTask} onViewHistory={(t) => { setSelectedTask(t); setOpenModal('history'); }} />
-                    ))}
-                    {/* Floating columns (pending, failed, done, archived) do not allow adding new tasks directly */}
-                  </SortableContext>
-                )}
+                ))}
               </div>
             </div>
           </div>
-        )}
-        <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.5' } } }) }}>
-          {activeId && tasks.find(t => t.id === activeId) ? <div className="task-card" style={{ cursor: 'grabbing' }}><div className="task-title">{tasks.find(t => t.id === activeId).content}</div></div> : null}
-        </DragOverlay>
-      </DndContext>
+        </div>
+      )}
     </div>
   );
 }
