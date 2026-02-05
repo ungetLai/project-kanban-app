@@ -58,13 +58,12 @@ Query Parameters:
 {
   "content": "New Task",
   "desc": "Description",
-  "status": "todo",
-  "createdBy": "User"
+  "status": "todo"
 }
 ```
-*Note: ID will be generated if not provided.*
+*Note: ID will be generated if not provided. `createdBy` and `createdAt` are automatically injected based on the authenticated user.*
 
-**Legacy Mode:** If payload is an Array, it overwrites ALL tasks (Backward Compatibility).
+**Legacy Mode:** If payload is an Array, it overwrites ALL tasks (Backward Compatibility). `createdBy` and `createdAt` will be added to new items.
 
 ### 3. Update Task
 **PUT** `/api/tasks?id={taskId}`
@@ -76,14 +75,10 @@ Query Parameters:
   "content": "Updated Title"
 }
 ```
+*Note: `updatedBy` and `updatedAt` are automatically injected based on the authenticated user.*
 
-### 4. Delete Task
-**DELETE** `/api/tasks?id={taskId}`
-
-**Response:**
-```json
-{ "success": true }
-```
+## Removed Endpoints
+- **DELETE** `/api/tasks`: This endpoint has been removed to ensure a "footprint" for all actions. Tasks should be archived or moved to a different status instead of being deleted.
 
 ## Data Storage
 - **Redis Key**: `kanban:tasks`

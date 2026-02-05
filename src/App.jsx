@@ -69,7 +69,7 @@ function TaskCard({ task, onEdit, onDelete, onViewHistory }) {
         <div className="task-actions" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
           <button className="task-action-btn" onClick={() => onViewHistory(task)} title="查看歷史"><History size={14} /></button>
           <button className="task-action-btn" onClick={() => onEdit(task.id)} title="編輯"><Pencil size={14} /></button>
-          <button className="task-action-btn delete" onClick={() => onDelete(task.id)} title="刪除"><Trash2 size={14} /></button>
+          <button className="task-action-btn delete" onClick={() => onDelete(task.id)} title="封存"><Trash2 size={14} /></button>
         </div>
       </div>
       {task.desc && <div className="task-desc">{task.desc}</div>}
@@ -377,12 +377,40 @@ export default function App() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!confirm('確定要刪除此任務嗎？')) return;
-    setTasks(prev => prev.filter(t => t.id !== taskId));
+    if (!confirm('確定要封存此任務嗎？')) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const now = Date.now();
+    const historyRecord = {
+      timestamp: now,
+      type: 'modify',
+      field: 'status',
+      operator: currentUser,
+      oldValue: task.status,
+      newValue: 'archived',
+      snapshot: { ...task }
+    };
+    const newHistory = [historyRecord, ...(task.history || [])].slice(0, 50);
+
+    const updatedTask = { 
+      ...task, 
+      status: 'archived', 
+      updatedAt: now, 
+      updatedBy: currentUser, 
+      history: newHistory 
+    };
+
+    setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+    
     try {
       setSaving(true);
       const params = new URLSearchParams(window.location.search);
-      await fetch(`${API_URL}?id=${taskId}&tid=${params.get('tid')}&uname=${params.get('uname')}`, { method: 'DELETE' });
+      await fetch(`${API_URL}?id=${taskId}&tid=${params.get('tid')}&uname=${params.get('uname')}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedTask)
+      });
       setLastSaved(new Date());
     } catch (err) {
       console.error(err);

@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   // Set CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -23,6 +23,7 @@ export default async function handler(req, res) {
   // 驗證身分
   const { tid, uname, bot, rule } = req.query;
   let isAuthorized = false;
+  let authenticatedUser = uname || 'Unknown';
 
   if (bot === 'True') {
     // 專屬密令規則：username + id + id(倒數) + username(前四碼) + SALT(環境變數)
@@ -35,12 +36,17 @@ export default async function handler(req, res) {
     
     if (rule === expectedRule && id !== "" && username !== "") {
       isAuthorized = true;
+      authenticatedUser = username;
     }
   }
 
   if (!isAuthorized) {
     const { ALLOWED_USERS } = await import('./users.js');
-    isAuthorized = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
+    const matchedUser = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
+    if (matchedUser) {
+      isAuthorized = true;
+      authenticatedUser = matchedUser.username;
+    }
   }
 
   if (!isAuthorized) {
@@ -145,13 +151,22 @@ export default async function handler(req, res) {
       const body = req.body;
       const tasks = await getTasks();
       if (Array.isArray(body)) {
-        await redis.set(TASKS_KEY, JSON.stringify(body));
-        return res.status(200).json({ success: true, count: body.length });
+        // If bulk update, track current user for all new entries if possible
+        const trackedBody = body.map(task => ({
+          ...task,
+          createdBy: task.createdBy || authenticatedUser,
+          createdAt: task.createdAt || Date.now()
+        }));
+        await redis.set(TASKS_KEY, JSON.stringify(trackedBody));
+        return res.status(200).json({ success: true, count: trackedBody.length });
       } else {
         const newTask = body;
         if (!newTask.id) newTask.id = Date.now().toString();
         // Ensure status is stored normalized
         if (newTask.status) newTask.status = newTask.status.toLowerCase().trim();
+        
+        newTask.createdBy = authenticatedUser;
+        newTask.createdAt = Date.now();
         
         tasks.push(newTask);
         await redis.set(TASKS_KEY, JSON.stringify(tasks));
@@ -177,7 +192,12 @@ export default async function handler(req, res) {
       const oldStatus = (tasks[index].status || '').toLowerCase().trim();
       if (updateData.status) updateData.status = updateData.status.toLowerCase().trim();
 
-      tasks[index] = { ...tasks[index], ...updateData, updatedAt: Date.now() };
+      tasks[index] = { 
+        ...tasks[index], 
+        ...updateData, 
+        updatedBy: authenticatedUser,
+        updatedAt: Date.now() 
+      };
       await redis.set(TASKS_KEY, JSON.stringify(tasks));
 
       // Webhook Trigger: Moving to Todo
@@ -186,15 +206,6 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json(tasks[index]);
-
-    } else if (req.method === 'DELETE') {
-      const { id } = req.query;
-      if (!id) return res.status(400).json({ error: 'Missing ID' });
-
-      const tasks = await getTasks();
-      const newTasks = tasks.filter(t => t.id.toString() !== id.toString());
-      await redis.set(TASKS_KEY, JSON.stringify(newTasks));
-      return res.status(200).json({ success: true });
 
     } else {
       return res.status(405).json({ error: 'Method not allowed' });
