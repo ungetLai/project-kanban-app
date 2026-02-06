@@ -59,9 +59,9 @@ const MAIN_COLUMNS = [
 ];
 
 const STATUS_BAR_ITEMS = [
-  { id: 'done', label: 'Done 完成', icon: <CircleCheck size={18} color="var(--accent-success)" />, colorClass: 'success' },
-  { id: 'pending', label: 'Pending 待處理', icon: <Hourglass size={18} color="var(--accent-warning)" />, colorClass: 'warning' },
-  { id: 'failed', label: 'Failed 驗收失敗', icon: <XCircle size={18} color="var(--accent-danger)" />, colorClass: 'danger' },
+  { id: 'done', label: 'Done 完成', icon: <CircleCheck size={18} color="#10B981" />, colorClass: 'success' },
+  { id: 'pending', label: 'Pending 待處理', icon: <Hourglass size={18} color="#F59E0B" />, colorClass: 'warning' },
+  { id: 'failed', label: 'Failed 驗收失敗', icon: <XCircle size={18} color="#EF4444" />, colorClass: 'danger' },
   { id: 'archived', label: 'Archive 封存', icon: <Archive size={18} color="#6B7280" />, colorClass: 'tertiary' },
 ];
 
@@ -566,7 +566,7 @@ export default function App() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-group">
-                <History size={24} color="var(--accent-primary)" />
+                <History size={24} color="#3B82F6" />
                 <h2 className="column-title" style={{fontSize: '22px'}}>任務歷史回溯</h2>
               </div>
               <button className="modal-close" onClick={() => setOpenModal(null)}><X size={20} /></button>
