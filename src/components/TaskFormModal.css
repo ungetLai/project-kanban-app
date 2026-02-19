@@ -1,76 +1,187 @@
+/* Modal Container */
 .task-form-modal {
   padding: 0 !important;
-  max-width: 700px !important;
-}
-
-.task-form {
-  padding: var(--spacing-xl);
+  max-width: 680px !important;
+  width: 95vw !important;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  overflow: hidden;
+}
+
+/* Header */
+.modal-header {
+  padding: 20px 24px;
+  background-color: var(--bg-column);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.modal-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.modal-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.modal-close {
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+  background-color: var(--border);
+}
+
+/* Form Layout */
+.task-form {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.full-width {
+  grid-column: span 2;
 }
 
 .form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .required {
-  color: var(--accent-danger);
+  color: var(--accent-danger, #ef4444);
 }
 
-.form-input, .form-select, .form-textarea {
+/* Inputs */
+.form-input,
+.form-select,
+.form-textarea {
   width: 100%;
-  padding: 10px var(--spacing-md);
-  background-color: var(--bg-secondary);
+  padding: 10px 12px;
+  background-color: var(--bg-input, var(--bg-page));
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  font-family: var(--font-ui);
 }
 
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: var(--accent-primary);
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover {
+  border-color: var(--text-tertiary);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-transparent);
+  background-color: var(--bg-surface);
+}
+
+/* Title Input Specifics */
+.title-input {
+  font-size: 18px;
+  font-weight: 600;
+  padding: 12px 14px;
 }
 
 .form-textarea {
   resize: vertical;
+  line-height: 1.5;
+  min-height: 120px;
 }
 
+/* Select Wrapper for potential custom arrow styling if needed later */
+.select-wrapper {
+  position: relative;
+}
+
+/* Footer Actions */
 .form-actions {
+  padding: 16px 24px;
+  background-color: var(--bg-column);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
+  gap: 12px;
+  margin-top: auto; /* Pushes footer to bottom if form is short */
 }
 
+/* Buttons */
 .btn-secondary {
-  height: 44px;
-  padding: 0 var(--spacing-xl);
-  background-color: var(--bg-secondary);
+  height: 40px;
+  padding: 0 20px;
+  background-color: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
 }
 
 .btn-primary {
-  height: 44px;
-  padding: 0 var(--spacing-xl);
-  background-color: var(--accent-primary);
+  height: 40px;
+  padding: 0 24px;
+  background-color: var(--accent);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: #FFFFFF;
   font-size: 14px;
   font-weight: 600;
@@ -78,52 +189,28 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
   opacity: 0.9;
+  box-shadow: var(--shadow-md);
 }
 
-.history-section {
-  margin-top: var(--spacing-xl);
-  padding-top: var(--spacing-xl);
-  border-top: 1px solid var(--border);
-}
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .full-width {
+    grid-column: span 1;
+  }
 
-.history-rich-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.history-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-
-.history-time { color: var(--text-tertiary); }
-.history-type { font-weight: 600; color: var(--accent-primary); }
-.history-user { background: var(--border); padding: 2px 6px; border-radius: 4px; }
-.old-status { color: var(--accent-danger); text-decoration: line-through; }
-.new-status { color: var(--accent-success); font-weight: 700; }
-.arrow { color: var(--text-tertiary); }
-
-.history-snapshot {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 0.85rem;
-  line-height: 1.6;
-}
-
-.snapshot-row {
-  margin-bottom: 4px;
-}
-
-.snapshot-row strong {
-  color: var(--text-secondary);
+  .modal-title {
+    font-size: 16px;
+  }
 }
