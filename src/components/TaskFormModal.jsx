@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Clock, Tag, Briefcase, AlertCircle, AlignLeft, Layers } from 'lucide-react';
 
 export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, mode }) {
   const [formData, setFormData] = useState({
     content: '',
     desc: '',
-    priority: '',
+    priority: 'P3',
     project: '',
     tags: '',
-    status: ''
+    status: 'backlog'
   });
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
       setFormData({
         content: initialData.content || '',
         desc: initialData.desc || '',
-        priority: initialData.priority || '',
+        priority: initialData.priority || 'P3',
         project: initialData.projectName || initialData.project || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '',
         status: initialData.status || 'backlog'
@@ -25,10 +25,10 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
       setFormData({
         content: '',
         desc: '',
-        priority: '',
+        priority: 'P3',
         project: '',
         tags: '',
-        status: ''
+        status: 'backlog'
       });
     }
   }, [isOpen, initialData]);
@@ -43,11 +43,10 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.content.trim()) {
-      alert('任務標題為必填項目');
+      alert('Task title is required');
       return;
     }
-    
-    // Process tags
+
     const processedTags = formData.tags
       .split(',')
       .map(t => t.trim())
@@ -64,169 +63,125 @@ export default function TaskFormModal({ isOpen, onClose, onSubmit, initialData, 
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content task-form-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{mode === 'create' ? '新增任務' : '編輯任務'}</h2>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <div className="modal-header-left">
+            <h2 className="modal-title">{mode === 'create' ? 'Create New Task' : 'Edit Task Details'}</h2>
+            <span className="modal-subtitle">
+              {mode === 'create' ? 'Add a new card to your board' : `Task ID: ${initialData?.id || 'Unknown'}`}
+            </span>
+          </div>
+          <button className="modal-close" onClick={onClose} aria-label="Close modal">
+            <X size={20} />
+          </button>
         </div>
+
         <form onSubmit={handleSubmit} className="task-form">
-          <div className="form-group">
-            <label htmlFor="content">任務標題 <span className="required">*</span></label>
-            <input
-              type="text"
-              id="content"
-              name="content"
-              value={formData.content}
-              onChange={handleChange}
-              placeholder="例如：實作登入功能"
-              autoFocus
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="priority">優先級</label>
-            <select
-              id="priority"
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className="form-select"
-            >
-              <option value="">無</option>
-              <option value="P0">P0 (最高 - Critical)</option>
-              <option value="P1">P1 (高 - High)</option>
-              <option value="P2">P2 (中 - Medium)</option>
-              <option value="P3">P3 (低 - Low)</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="project">專案名稱</label>
-            <input
-              type="text"
-              id="project"
-              name="project"
-              value={formData.project}
-              onChange={handleChange}
-              placeholder="例如：Kanban App"
-              className="form-input"
-            />
-          </div>
-
-          {mode === 'edit' && (
-            <div className="form-group">
-              <label htmlFor="status">狀態 (Status)</label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
+          <div className="form-grid">
+            {/* Full Width Title */}
+            <div className="form-group full-width">
+              <label htmlFor="content">Task Title <span className="required">*</span></label>
+              <input
+                type="text"
+                id="content"
+                name="content"
+                value={formData.content}
                 onChange={handleChange}
-                className="form-select"
-              >
-                <option value="backlog">BackLog (待討論)</option>
-                <option value="todo">Todo (準備中)</option>
-                <option value="ongoing">OnGoing (執行階段)</option>
-                <option value="review">Review (任務驗收)</option>
-                <option value="pending">Pending (有待確認)</option>
-                <option value="done">Done (結案)</option>
-                <option value="archived">Archive (歷史區)</option>
-              </select>
+                placeholder="What needs to be done?"
+                autoFocus
+                className="form-input title-input"
+              />
             </div>
-          )}
 
-          <div className="form-group">
-            <label htmlFor="tags">標籤 (以逗號分隔)</label>
-            <input
-              type="text"
-              id="tags"
-              name="tags"
-              value={formData.tags}
-              onChange={handleChange}
-              placeholder="例如：Frontend, Bug, v1.0"
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="desc">任務描述</label>
-            <textarea
-              id="desc"
-              name="desc"
-              value={formData.desc}
-              onChange={handleChange}
-              placeholder="詳細說明任務內容..."
-              rows={5}
-              className="form-textarea"
-            />
-          </div>
-
-          {mode === 'edit' && initialData?.history && initialData.history.length > 0 && (
-            <div className="history-section">
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>操作歷史</h3>
-              <div className="history-timeline">
-                {initialData.history.sort((a, b) => b.timestamp - a.timestamp).map((record, index) => (
-                  <div key={index} className="history-item">
-                    {record.snapshot ? (
-                      <div className="history-rich-content">
-                        <div className="history-header">
-                          <span className="history-time">
-                            {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
-                          </span>
-                          <span className="history-type">
-                            ({record.type || 'modify'})
-                          </span>
-                          <span className="history-user">
-                            {record.operator || record.updatedBy || 'Unknown'}
-                          </span>
-                          {record.field === 'status' ? (
-                            <>
-                              <span className="arrow">→</span>
-                              <span className="old-status">{record.oldValue || 'backlog'}</span>
-                              <span className="arrow">→</span>
-                              <span className="new-status">{record.newValue}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="arrow">→</span>
-                              <span>{record.newValue}</span>
-                            </>
-                          )}
-                        </div>
-                        <div className="history-snapshot">
-                          <div className="snapshot-row"><strong>任務主題 :</strong> {record.snapshot.content}</div>
-                          <div className="snapshot-row"><strong>任務內容 :</strong> {record.snapshot.desc || '(無)'}</div>
-                          <div className="snapshot-row"><strong>優先級 :</strong> {record.snapshot.priority || '(無)'}</div>
-                          <div className="snapshot-row"><strong>專案名稱 :</strong> {record.snapshot.projectName || '(無)'}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="history-timestamp">
-                          {new Date(record.timestamp).toLocaleString('zh-TW', { hour12: false })}
-                        </div>
-                        <div className="history-content">
-                          <div className="history-field">{record.field}</div>
-                          <div className="history-change">
-                            {record.oldValue && (
-                              <>
-                                <span className="old-value">{String(record.oldValue)}</span>
-                                <span className="arrow">→</span>
-                              </>
-                            )}
-                            <span className="new-value">{String(record.newValue)}</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+            {/* Left Column - Priority & Project */}
+            <div className="form-group">
+              <label htmlFor="priority"><AlertCircle size={14} /> Priority</label>
+              <div className="select-wrapper">
+                <select
+                  id="priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  className="form-select"
+                >
+                  <option value="P0">P0 - Critical</option>
+                  <option value="P1">P1 - High</option>
+                  <option value="P2">P2 - Medium</option>
+                  <option value="P3">P3 - Low</option>
+                </select>
               </div>
             </div>
-          )}
+
+            <div className="form-group">
+              <label htmlFor="project"><Briefcase size={14} /> Project</label>
+              <input
+                type="text"
+                id="project"
+                name="project"
+                value={formData.project}
+                onChange={handleChange}
+                placeholder="Project Name"
+                className="form-input"
+              />
+            </div>
+
+            {/* Right Column - Status & Tags */}
+            <div className="form-group">
+              <label htmlFor="status"><Layers size={14} /> Status</label>
+              <div className="select-wrapper">
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="form-select"
+                  disabled={mode === 'create'} // Optional: lock status on create if desired, or keep editable
+                >
+                  <option value="backlog">Backlog</option>
+                  <option value="todo">Todo</option>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="review">Review</option>
+                  <option value="pending">Pending</option>
+                  <option value="done">Done</option>
+                  <option value="failed">Failed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="tags"><Tag size={14} /> Tags</label>
+              <input
+                type="text"
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleChange}
+                placeholder="e.g. Frontend, Bug"
+                className="form-input"
+              />
+            </div>
+
+            {/* Full Width Description */}
+            <div className="form-group full-width">
+              <label htmlFor="desc"><AlignLeft size={14} /> Description</label>
+              <textarea
+                id="desc"
+                name="desc"
+                value={formData.desc}
+                onChange={handleChange}
+                placeholder="Add detailed description..."
+                rows={6}
+                className="form-textarea"
+              />
+            </div>
+          </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>取消</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
             <button type="submit" className="btn-primary">
-              <Save size={16} /> {mode === 'create' ? '建立' : '儲存'}
+              <Save size={16} />
+              {mode === 'create' ? 'Create Task' : 'Save Changes'}
             </button>
           </div>
         </form>
