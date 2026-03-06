@@ -21,28 +21,41 @@ export default async function handler(req, res) {
   }
 
   // 驗證身分
-  const { tid, uname, bot, rule } = req.query;
+  const { tid, uname, bot, rule, status } = req.query;
+  
+  // 參數正規化：全部轉小寫，確保大小寫不敏感
+  const normalizedBot = bot?.toLowerCase();
+  const normalizedTid = tid?.trim();
+  const normalizedUname = uname?.trim().toLowerCase();
+  const normalizedRule = rule?.toLowerCase();
+  
   let isAuthorized = false;
   let authenticatedUser = uname || 'Unknown';
 
-  if (bot === 'True') {
+  if (normalizedBot === 'true') {
     // 專屬密令規則：username + id + id(倒數) + username(前四碼) + SALT(環境變數)
-    const username = uname || "";
+    // username 需轉為小寫進行比對
+    const username = (uname || "").toLowerCase();
     const id = tid || "";
     const idReverse = id.split('').reverse().join('');
     const unamePrefix = username.substring(0, 4);
-    const salt = process.env.AUTH_SALT || "";
+    const salt = (process.env.AUTH_SALT || "").toLowerCase();
     const expectedRule = `${username}${id}${idReverse}${unamePrefix}${salt}`;
     
-    if (rule === expectedRule && id !== "" && username !== "") {
+    // rule 也需轉小寫比對
+    if ((rule?.toLowerCase() || '') === expectedRule && id !== "" && username !== "") {
       isAuthorized = true;
-      authenticatedUser = username;
+      authenticatedUser = uname; // 保持原始 username
     }
   }
 
   if (!isAuthorized) {
     const { ALLOWED_USERS } = await import('./users.js');
-    const matchedUser = ALLOWED_USERS.find(u => u.id === tid && u.username === (uname || '').trim());
+    // 大小寫不敏感的比對
+    const matchedUser = ALLOWED_USERS.find(u => 
+      u.id === normalizedTid && 
+      u.username?.toLowerCase() === normalizedUname
+    );
     if (matchedUser) {
       isAuthorized = true;
       authenticatedUser = matchedUser.username;
